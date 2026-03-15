@@ -195,6 +195,7 @@ export type Database = {
           customer_id: string
           chinese_company_id: string
           turkish_company_id: string
+          travel_name: string | null
           travel_start_date: string
           travel_end_date: string
           visa_type: string
@@ -210,6 +211,7 @@ export type Database = {
           customer_id: string
           chinese_company_id: string
           turkish_company_id: string
+          travel_name?: string | null
           travel_start_date: string
           travel_end_date: string
           visa_type: string
@@ -225,6 +227,7 @@ export type Database = {
           customer_id?: string
           chinese_company_id?: string
           turkish_company_id?: string
+          travel_name?: string | null
           travel_start_date?: string
           travel_end_date?: string
           visa_type?: string

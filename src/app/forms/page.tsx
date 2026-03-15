@@ -11,6 +11,7 @@ import { PlusIcon, TrashIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicon
 interface FormItem {
   id: string
   access_token: string
+  travel_name: string | null
   visa_type: string
   travel_start_date: string
   travel_end_date: string
@@ -90,7 +91,8 @@ export default function FormsPage() {
     return (
       f.access_token.toLowerCase().includes(q) ||
       (f.customer?.full_name || '').toLowerCase().includes(q) ||
-      (f.chinese_company?.company_name || '').toLowerCase().includes(q)
+      (f.chinese_company?.company_name || '').toLowerCase().includes(q) ||
+      (f.travel_name || '').toLowerCase().includes(q)
     )
   })
 
@@ -174,7 +176,10 @@ export default function FormsPage() {
                 </div>
 
                 {/* Details */}
-                <div className="flex items-center gap-6 mt-3 text-xs text-slate-500">
+                <div className="flex items-center gap-6 mt-3 text-xs text-slate-500 flex-wrap">
+                  {f.travel_name && (
+                    <span className="text-indigo-400 font-medium">📌 {f.travel_name}</span>
+                  )}
                   <span>Vize: {f.visa_type}</span>
                   <span>Gidis: {new Date(f.travel_start_date).toLocaleDateString('tr-TR')}</span>
                   <span>Donus: {new Date(f.travel_end_date).toLocaleDateString('tr-TR')}</span>
