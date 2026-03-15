@@ -693,7 +693,7 @@ export default function NewCustomerPage() {
                         <div>
                           <label className="form-label">Cocuk Adi *</label>
                           <input
-                            {...register(`children_${index}_first_name` as const, { 
+                            {...register(`children_${index}_first_name` as any, { 
                               required: 'Cocuk adi gereklidir' 
                             })}
                             type="text"
@@ -705,7 +705,7 @@ export default function NewCustomerPage() {
                         <div>
                           <label className="form-label">Cocuk Soyadi *</label>
                           <input
-                            {...register(`children_${index}_last_name` as const, { 
+                            {...register(`children_${index}_last_name` as any, { 
                               required: 'Cocuk soyadi gereklidir' 
                             })}
                             type="text"
@@ -717,7 +717,7 @@ export default function NewCustomerPage() {
                         <div>
                           <label className="form-label">Cocuk Milliyeti *</label>
                           <input
-                            {...register(`children_${index}_nationality` as const, { 
+                            {...register(`children_${index}_nationality` as any, { 
                               required: 'Cocuk milliyeti gereklidir' 
                             })}
                             type="text"
@@ -730,7 +730,7 @@ export default function NewCustomerPage() {
                         <div>
                           <label className="form-label">Cocuk Dogum Tarihi *</label>
                           <input
-                            {...register(`children_${index}_birth_date` as const, { 
+                            {...register(`children_${index}_birth_date` as any, { 
                               required: 'Cocuk dogum tarihi gereklidir' 
                             })}
                             type="date"

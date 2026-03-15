@@ -371,19 +371,19 @@ export default function EditCustomerPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="form-label">Ad</label>
-                          <input {...register(`children_${i}_first_name` as const)} className="input-field" placeholder="Adi" />
+                          <input {...register(`children_${i}_first_name` as any)} className="input-field" placeholder="Adi" />
                         </div>
                         <div>
                           <label className="form-label">Soyad</label>
-                          <input {...register(`children_${i}_last_name` as const)} className="input-field" placeholder="Soyadi" />
+                          <input {...register(`children_${i}_last_name` as any)} className="input-field" placeholder="Soyadi" />
                         </div>
                         <div>
                           <label className="form-label">Milliyet</label>
-                          <input {...register(`children_${i}_nationality` as const)} className="input-field" defaultValue="Türkiye" />
+                          <input {...register(`children_${i}_nationality` as any)} className="input-field" defaultValue="Türkiye" />
                         </div>
                         <div>
                           <label className="form-label">Dogum Tarihi</label>
-                          <input {...register(`children_${i}_birth_date` as const)} type="date" className="input-field" />
+                          <input {...register(`children_${i}_birth_date` as any)} type="date" className="input-field" />
                         </div>
                       </div>
                     </div>
