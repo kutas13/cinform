@@ -137,7 +137,6 @@ export async function GET(
       },
 
       form: {
-        travel_name: form.travel_name || null,
         travel_start_date: form.travel_start_date || '',
         travel_end_date: form.travel_end_date || '',
         visa_type: form.visa_type || '',

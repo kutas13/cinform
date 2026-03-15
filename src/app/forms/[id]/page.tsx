@@ -18,7 +18,6 @@ import {
 interface FormData {
   id: string
   access_token: string
-  travel_name: string | null
   customer: {
     full_name: string
     tc_number: string
@@ -170,12 +169,6 @@ export default function FormDetailPage() {
         <div className="card p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">📋 Form Bilgileri</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            {formData.travel_name && (
-              <div className="md:col-span-2">
-                <span className="font-medium text-gray-500">Seyahat Bilgisi Adı:</span>
-                <p className="text-indigo-600 font-semibold">{formData.travel_name}</p>
-              </div>
-            )}
             <div>
               <span className="font-medium text-gray-500">Müşteri:</span>
               <p className="text-gray-900">{formData.customer.full_name}</p>
