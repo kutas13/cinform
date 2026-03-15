@@ -11,6 +11,7 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 
 interface CustomerForm {
   full_name: string
+  birth_year: number
   birth_city: string
   birth_province: string
   tc_number: string
