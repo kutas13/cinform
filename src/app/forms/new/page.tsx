@@ -14,6 +14,7 @@ interface FormData {
   customer_id: string
   chinese_company_id: string
   turkish_company_id: string
+  travel_name: string
   travel_start_date: string
   travel_end_date: string
   visa_type: string
@@ -26,6 +27,16 @@ interface FormData {
   china_visa_month?: number
   fingerprint_given?: string
   fingerprint_date?: string
+}
+
+interface SavedTravel {
+  travel_name: string
+  travel_start_date: string
+  travel_end_date: string
+  visa_type: string
+  visa_validity_months: number
+  max_duration_days: number
+  entries_type: string
 }
 
 interface Customer {
@@ -51,6 +62,7 @@ export default function NewFormPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [chineseCompanies, setChineseCompanies] = useState<ChineseCompany[]>([])
   const [turkishCompanies, setTurkishCompanies] = useState<TurkishCompany[]>([])
+  const [savedTravels, setSavedTravels] = useState<SavedTravel[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [createdToken, setCreatedToken] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -66,11 +78,30 @@ export default function NewFormPage() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
-  } = useForm<FormData>()
+  } = useForm<FormData>({
+    defaultValues: {
+      max_duration_days: 30,
+    },
+  })
 
   const beenToChina = watch('been_to_china')
   const fingerprintGiven = watch('fingerprint_given')
+
+  const handleSavedTravelSelect = (travelName: string) => {
+    if (!travelName) return
+    const travel = savedTravels.find(t => t.travel_name === travelName)
+    if (!travel) return
+    setValue('travel_name', travel.travel_name)
+    setValue('travel_start_date', travel.travel_start_date)
+    setValue('travel_end_date', travel.travel_end_date)
+    setValue('visa_type', travel.visa_type)
+    setValue('visa_validity_months', travel.visa_validity_months)
+    setValue('max_duration_days', travel.max_duration_days)
+    setValue('entries_type', travel.entries_type as 'Single' | 'Double' | 'Multiple')
+    toast.success(`"${travel.travel_name}" seyahat bilgileri yüklendi`)
+  }
 
   // Load dropdown data
   useEffect(() => {
@@ -78,7 +109,7 @@ export default function NewFormPage() {
       if (!user) return
 
       try {
-        const [customersRes, chineseRes, turkishRes] = await Promise.all([
+        const [customersRes, chineseRes, turkishRes, travelsRes] = await Promise.all([
           supabase
             .from('customers')
             .select('id, full_name, tc_number')
@@ -94,11 +125,22 @@ export default function NewFormPage() {
             .select('id, company_name, address')
             .eq('created_by', user.id)
             .order('created_at', { ascending: false }),
+          supabase
+            .from('forms')
+            .select('travel_name, travel_start_date, travel_end_date, visa_type, visa_validity_months, max_duration_days, entries_type')
+            .eq('created_by', user.id)
+            .not('travel_name', 'is', null)
+            .order('created_at', { ascending: false }),
         ])
 
         setCustomers(customersRes.data || [])
         setChineseCompanies(chineseRes.data || [])
         setTurkishCompanies(turkishRes.data || [])
+
+        const uniqueTravels = (travelsRes.data || []).filter(
+          (t: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.travel_name === t.travel_name) === i
+        ) as SavedTravel[]
+        setSavedTravels(uniqueTravels)
       } catch (error) {
         console.error('Error loading data:', error)
         toast.error('Veriler yüklenirken hata oluştu')
@@ -133,6 +175,7 @@ export default function NewFormPage() {
         customer_id: data.customer_id,
         chinese_company_id: data.chinese_company_id,
         turkish_company_id: data.turkish_company_id,
+        travel_name: data.travel_name || null,
         travel_start_date: data.travel_start_date,
         travel_end_date: data.travel_end_date,
         visa_type: data.visa_type,
@@ -373,7 +416,43 @@ export default function NewFormPage() {
               <h3 className="text-lg font-bold text-indigo-400 mb-6">
                 ✈️ Seyahat Bilgileri
               </h3>
+
+              {savedTravels.length > 0 && (
+                <div className="mb-6 p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                  <label className="form-label text-indigo-300">Kayıtlı Seyahatleri Getir</label>
+                  <select
+                    className="input-field"
+                    onChange={(e) => handleSavedTravelSelect(e.target.value)}
+                    defaultValue=""
+                  >
+                    <option value="">Kayıtlı seyahat seçin...</option>
+                    {savedTravels.map((t, i) => (
+                      <option key={i} value={t.travel_name}>
+                        {t.travel_name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-indigo-400/60 mt-1.5">
+                    Daha önce kaydettiğiniz seyahat bilgilerini otomatik doldurun
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Travel Name */}
+                <div className="md:col-span-2">
+                  <label className="form-label">Seyahat Bilgisi Adı</label>
+                  <input
+                    {...register('travel_name')}
+                    type="text"
+                    className="input-field"
+                    placeholder="Örn: Guangzhou Ticari Ziyaret 2026"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    İsim vererek bu seyahat bilgilerini sonraki formlarda tekrar kullanabilirsiniz
+                  </p>
+                </div>
+
                 {/* Start Date */}
                 <div>
                   <label className="form-label">Seyahat Başlangıç Tarihi *</label>
@@ -440,11 +519,9 @@ export default function NewFormPage() {
                     className="input-field"
                   >
                     <option value="">Seçiniz</option>
-                    <option value="1">1 Ay</option>
                     <option value="3">3 Ay</option>
                     <option value="6">6 Ay</option>
                     <option value="12">12 Ay</option>
-                    <option value="24">24 Ay</option>
                   </select>
                   {errors.visa_validity_months && (
                     <p className="text-rose-400 text-xs mt-1.5">{errors.visa_validity_months.message}</p>
@@ -454,20 +531,20 @@ export default function NewFormPage() {
                 {/* Max Duration Days */}
                 <div>
                   <label className="form-label">Kaç Gün Kalış? *</label>
-                  <select
+                  <input
                     {...register('max_duration_days', { 
                       required: 'Kalış süresi gereklidir',
-                      valueAsNumber: true 
+                      valueAsNumber: true,
+                      min: { value: 1, message: 'En az 1 gün olmalıdır' },
+                      max: { value: 365, message: 'En fazla 365 gün olabilir' },
                     })}
+                    type="number"
                     className="input-field"
-                  >
-                    <option value="">Seçiniz</option>
-                    <option value="30">30 Gün</option>
-                    <option value="60">60 Gün</option>
-                    <option value="90">90 Gün</option>
-                    <option value="180">180 Gün</option>
-                    <option value="365">365 Gün</option>
-                  </select>
+                    placeholder="30"
+                    min={1}
+                    max={365}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Varsayılan: 30 gün</p>
                   {errors.max_duration_days && (
                     <p className="text-rose-400 text-xs mt-1.5">{errors.max_duration_days.message}</p>
                   )}
