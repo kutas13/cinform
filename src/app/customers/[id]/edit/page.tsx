@@ -81,7 +81,18 @@ export default function EditCustomerPage() {
       router.push('/customers')
       return
     }
-    reset(data)
+
+    const formData: any = { ...data }
+    if (data.children_data && Array.isArray(data.children_data)) {
+      data.children_data.forEach((child: any, i: number) => {
+        formData[`children_${i}_first_name`] = child.first_name || ''
+        formData[`children_${i}_last_name`] = child.last_name || ''
+        formData[`children_${i}_nationality`] = child.nationality || 'Türkiye'
+        formData[`children_${i}_birth_date`] = child.birth_date || ''
+      })
+    }
+
+    reset(formData)
     setPageLoading(false)
   }
 
