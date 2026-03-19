@@ -39,23 +39,9 @@ interface SavedTravel {
   entries_type: string
 }
 
-interface Customer {
-  id: string
-  full_name: string
-  tc_number: string
-}
-
-interface ChineseCompany {
-  id: string
-  company_name: string
-  city: string
-}
-
-interface TurkishCompany {
-  id: string
-  company_name: string
-  address: string
-}
+interface Customer { id: string; full_name: string; tc_number: string }
+interface ChineseCompany { id: string; company_name: string; city: string }
+interface TurkishCompany { id: string; company_name: string; address: string }
 
 export default function NewFormPage() {
   const [loading, setLoading] = useState(false)
@@ -74,16 +60,8 @@ export default function NewFormPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<FormData>({
-    defaultValues: {
-      max_duration_days: 30,
-    },
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
+    defaultValues: { max_duration_days: 30 },
   })
 
   const beenToChina = watch('been_to_china')
@@ -100,111 +78,66 @@ export default function NewFormPage() {
     setValue('visa_validity_months', travel.visa_validity_months)
     setValue('max_duration_days', travel.max_duration_days)
     setValue('entries_type', travel.entries_type as 'Single' | 'Double' | 'Multiple')
-    toast.success(`"${travel.travel_name}" seyahat bilgileri yüklendi`)
+    toast.success(`"${travel.travel_name}" seyahat bilgileri yuklendi`)
   }
 
   useEffect(() => {
     async function loadData() {
       if (!user) return
-
       try {
         const [customersRes, chineseRes, turkishRes, travelsRes] = await Promise.all([
-          supabase
-            .from('customers')
-            .select('id, full_name, tc_number')
-            .eq('created_by', user.id)
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('chinese_companies')
-            .select('id, company_name, city')
-            .eq('created_by', user.id)
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('turkish_companies')
-            .select('id, company_name, address')
-            .eq('created_by', user.id)
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('forms')
-            .select('travel_name, travel_start_date, travel_end_date, visa_type, visa_validity_months, max_duration_days, entries_type')
-            .eq('created_by', user.id)
-            .not('travel_name', 'is', null)
-            .order('created_at', { ascending: false }),
+          supabase.from('customers').select('id, full_name, tc_number').eq('created_by', user.id).order('created_at', { ascending: false }),
+          supabase.from('chinese_companies').select('id, company_name, city').eq('created_by', user.id).order('created_at', { ascending: false }),
+          supabase.from('turkish_companies').select('id, company_name, address').eq('created_by', user.id).order('created_at', { ascending: false }),
+          supabase.from('forms').select('travel_name, travel_start_date, travel_end_date, visa_type, visa_validity_months, max_duration_days, entries_type').eq('created_by', user.id).not('travel_name', 'is', null).order('created_at', { ascending: false }),
         ])
-
         setCustomers(customersRes.data || [])
         setChineseCompanies(chineseRes.data || [])
         setTurkishCompanies(turkishRes.data || [])
-
         const uniqueTravels = (travelsRes.data || []).filter(
           (t: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.travel_name === t.travel_name) === i
         ) as SavedTravel[]
         setSavedTravels(uniqueTravels)
       } catch (error) {
         console.error('Error loading data:', error)
-        toast.error('Veriler yüklenirken hata oluştu')
+        toast.error('Veriler yuklenirken hata olustu')
       } finally {
         setLoadingData(false)
       }
     }
-
     loadData()
   }, [user, supabase])
 
   const onSubmit = async (data: FormData) => {
-    if (!user) {
-      toast.error('Giriş yapmanız gerekiyor')
-      return
-    }
-
+    if (!user) { toast.error('Giris yapmaniz gerekiyor'); return }
     const startDate = new Date(data.travel_start_date)
     const endDate = new Date(data.travel_end_date)
-    
-    if (endDate <= startDate) {
-      toast.error('Bitiş tarihi başlangıç tarihinden sonra olmalıdır')
-      return
-    }
+    if (endDate <= startDate) { toast.error('Bitis tarihi baslangictan sonra olmali'); return }
 
     setLoading(true)
     try {
       const accessToken = generateAccessToken()
-      
       const insertData: Record<string, any> = {
-        customer_id: data.customer_id,
-        chinese_company_id: data.chinese_company_id,
-        turkish_company_id: data.turkish_company_id,
-        travel_name: data.travel_name || null,
-        travel_start_date: data.travel_start_date,
-        travel_end_date: data.travel_end_date,
-        visa_type: data.visa_type,
-        visa_validity_months: data.visa_validity_months,
-        max_duration_days: data.max_duration_days,
-        entries_type: data.entries_type,
-        been_to_china: data.been_to_china === 'yes',
-        fingerprint_given: data.fingerprint_given === 'yes',
-        access_token: accessToken,
-        created_by: user.id,
+        customer_id: data.customer_id, chinese_company_id: data.chinese_company_id,
+        turkish_company_id: data.turkish_company_id, travel_name: data.travel_name || null,
+        travel_start_date: data.travel_start_date, travel_end_date: data.travel_end_date,
+        visa_type: data.visa_type, visa_validity_months: data.visa_validity_months,
+        max_duration_days: data.max_duration_days, entries_type: data.entries_type,
+        been_to_china: data.been_to_china === 'yes', fingerprint_given: data.fingerprint_given === 'yes',
+        access_token: accessToken, created_by: user.id,
       }
-      if (data.china_visa_number) insertData.china_visa_number = data.china_visa_number;
-      if (data.china_visa_year) insertData.china_visa_year = data.china_visa_year;
-      if (data.china_visa_month) insertData.china_visa_month = data.china_visa_month;
-      if (data.fingerprint_date) insertData.fingerprint_date = data.fingerprint_date;
+      if (data.china_visa_number) insertData.china_visa_number = data.china_visa_number
+      if (data.china_visa_year) insertData.china_visa_year = data.china_visa_year
+      if (data.china_visa_month) insertData.china_visa_month = data.china_visa_month
+      if (data.fingerprint_date) insertData.fingerprint_date = data.fingerprint_date
 
-      const { data: formData, error } = await supabase
-        .from('forms')
-        .insert(insertData)
-        .select()
-        .single()
-
-      if (error) {
-        throw error
-      }
-
-      toast.success('Form başarıyla oluşturuldu!')
+      const { error } = await supabase.from('forms').insert(insertData).select().single()
+      if (error) throw error
+      toast.success('Form basariyla olusturuldu!')
       setCreatedToken(accessToken)
     } catch (error: any) {
       console.error('Error:', error)
-      toast.error('Bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'))
+      toast.error('Bir hata olustu: ' + (error.message || 'Bilinmeyen hata'))
     } finally {
       setLoading(false)
     }
@@ -213,301 +146,238 @@ export default function NewFormPage() {
   const handleCopyToken = async () => {
     if (!createdToken) return
     const success = await copyToClipboard(createdToken)
-    if (success) {
-      toast.success('🎉 Token kopyalandı!')
-      setCopied(true)
-      setTimeout(() => setCopied(false), 3000)
-    }
+    if (success) { toast.success('Token kopyalandi!'); setCopied(true); setTimeout(() => setCopied(false), 3000) }
   }
 
   if (loadingData) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-2 border-indigo-500 border-t-transparent"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-emerald-500 border-t-transparent" />
+          <p className="text-xs text-slate-500">Veriler yukleniyor...</p>
+        </div>
       </div>
     )
   }
 
   if (createdToken) {
     return (
-      <div className="min-h-screen bg-slate-950 bg-grid py-8">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="card p-10 text-center mb-8">
-            <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-6 ring-2 ring-emerald-500/20">
-              <CheckIcon className="h-10 w-10 text-emerald-400" />
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Form Olusturuldu!</h1>
-            <p className="text-slate-400 text-lg">
-              Asagidaki token'i Chrome extension'da kullanabilirsiniz.
-            </p>
+      <div className="p-6 lg:p-10 max-w-2xl mx-auto">
+        <div className="card p-10 text-center mb-8">
+          <div className="w-20 h-20 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
+            <CheckIcon className="h-10 w-10 text-emerald-400" />
           </div>
+          <h1 className="text-3xl font-bold text-white mb-2">Form Olusturuldu!</h1>
+          <p className="text-slate-400">Asagidaki token'i Chrome extension'da kullanabilirsiniz.</p>
+        </div>
 
-          <div className="card p-6 mb-8">
-            <h2 className="text-lg font-bold text-white mb-4">Access Token</h2>
-            
-            <div className="bg-slate-950 rounded-xl p-5 mb-4 border border-slate-700">
-              <code className="text-emerald-400 break-all font-mono text-sm block mb-4">
-                {createdToken}
-              </code>
-              <button
-                onClick={handleCopyToken}
-                className="w-full flex items-center justify-center space-x-2 btn-primary py-3.5 text-base"
-              >
-                {copied ? (
-                  <>
-                    <CheckIcon className="h-5 w-5" />
-                    <span>Kopyalandi!</span>
-                  </>
-                ) : (
-                  <>
-                    <ClipboardDocumentIcon className="h-5 w-5" />
-                    <span>Token'i Kopyala</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-500 text-center">
-              Bu token'i kaybetmeyin! Chrome extension'da "Form ID" alanina yapistirin.
-            </p>
+        <div className="card p-6 mb-8">
+          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Access Token</h2>
+          <div className="bg-[#0a0e1a] rounded-xl p-5 mb-4 border border-slate-700/50">
+            <code className="text-emerald-400 break-all font-mono text-sm block mb-4">{createdToken}</code>
+            <button onClick={handleCopyToken} className="w-full btn-primary py-3.5 text-base flex items-center justify-center gap-2">
+              {copied ? <><CheckIcon className="h-5 w-5" /> Kopyalandi!</> : <><ClipboardDocumentIcon className="h-5 w-5" /> Token'i Kopyala</>}
+            </button>
           </div>
+          <p className="text-xs text-slate-600 text-center">Chrome extension'da "Form ID" alanina yapistirin.</p>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link href="/forms/new" className="btn-success text-center py-3">
-              Yeni Form
-            </Link>
-            <Link href="/dashboard" className="btn-primary text-center py-3">
-              Dashboard
-            </Link>
-            <Link href="/customers/new" className="btn-secondary text-center py-3">
-              Yeni Musteri
-            </Link>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link href="/forms/new" className="btn-success text-center py-3">Yeni Form</Link>
+          <Link href="/dashboard" className="btn-primary text-center py-3">Dashboard</Link>
+          <Link href="/customers/new" className="btn-secondary text-center py-3">Yeni Musteri</Link>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 bg-grid py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <Link href="/forms" className="inline-flex items-center text-indigo-400 hover:text-indigo-300 text-sm mb-4">
-            <ArrowLeftIcon className="h-4 w-4 mr-1.5" />
-            Formlara Geri Don
-          </Link>
-          <h1 className="page-title">Yeni Form Olustur</h1>
-          <p className="text-slate-400 mt-1">Vize basvuru formu olusturun</p>
-        </div>
+    <div className="p-6 lg:p-10 max-w-4xl mx-auto">
+      <div className="mb-8">
+        <Link href="/forms" className="inline-flex items-center text-blue-400 hover:text-blue-300 text-sm mb-4 transition-colors">
+          <ArrowLeftIcon className="h-4 w-4 mr-1.5" /> Formlara Geri Don
+        </Link>
+        <h1 className="page-title">Yeni Form Olustur</h1>
+        <p className="text-slate-500 mt-1 text-sm">Vize basvuru formu olusturun</p>
+      </div>
 
-        {(customers.length === 0 || chineseCompanies.length === 0 || turkishCompanies.length === 0) && (
-          <div className="card p-6 mb-8 border-l-4 border-amber-500">
-            <h3 className="text-lg font-semibold text-amber-400 mb-2">Eksik Bilgiler</h3>
-            <p className="text-slate-400 mb-4">
-              Form oluşturmak için aşağıdaki bilgilerin tamamlanmış olması gerekiyor:
-            </p>
-            <ul className="space-y-2 text-slate-300">
-              {customers.length === 0 && (
-                <li>• En az 1 müşteri ({' '}
-                  <Link href="/customers/new" className="underline font-semibold">Müşteri Oluştur</Link>
-                  )</li>
-              )}
-              {chineseCompanies.length === 0 && (
-                <li>• En az 1 Çinli şirket ({' '}
-                  <Link href="/chinese-companies/new" className="underline font-semibold">Çinli Şirket Oluştur</Link>
-                  )</li>
-              )}
-              {turkishCompanies.length === 0 && (
-                <li>• En az 1 Türk şirket ({' '}
-                  <Link href="/turkish-companies/new" className="underline font-semibold">Türk Şirket Oluştur</Link>
-                  )</li>
-              )}
-            </ul>
+      {(customers.length === 0 || chineseCompanies.length === 0 || turkishCompanies.length === 0) && (
+        <div className="card p-6 mb-8 border-l-4 border-amber-500/50">
+          <h3 className="text-base font-semibold text-amber-400 mb-2">Eksik Bilgiler</h3>
+          <p className="text-slate-400 text-sm mb-3">Form olusturmak icin asagidaki bilgiler gerekli:</p>
+          <ul className="space-y-1.5 text-slate-300 text-sm">
+            {customers.length === 0 && <li>• En az 1 musteri (<Link href="/customers/new" className="underline text-blue-400">Musteri Olustur</Link>)</li>}
+            {chineseCompanies.length === 0 && <li>• En az 1 Cinli sirket (<Link href="/chinese-companies/new" className="underline text-blue-400">Cinli Sirket Olustur</Link>)</li>}
+            {turkishCompanies.length === 0 && <li>• En az 1 Turk sirket (<Link href="/turkish-companies/new" className="underline text-blue-400">Turk Sirket Olustur</Link>)</li>}
+          </ul>
+        </div>
+      )}
+
+      <div className="card p-6 lg:p-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Secimler */}
+          <div className="form-section bg-slate-800/30 border-slate-700/50">
+            <h3 className="text-base font-bold text-slate-200 mb-5">Sirket ve Musteri Secimi</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div>
+                <label className="form-label">Musteri Sec *</label>
+                <select {...register('customer_id', { required: 'Musteri secimi gerekli' })} className="input-field" disabled={customers.length === 0}>
+                  <option value="">Musteri Secin</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.full_name} ({c.tc_number})</option>)}
+                </select>
+                {errors.customer_id && <p className="text-rose-400 text-xs mt-1.5">{errors.customer_id.message}</p>}
+              </div>
+              <div>
+                <label className="form-label">Cinli Sirket Sec *</label>
+                <select {...register('chinese_company_id', { required: 'Cinli sirket secimi gerekli' })} className="input-field" disabled={chineseCompanies.length === 0}>
+                  <option value="">Cinli Sirket Secin</option>
+                  {chineseCompanies.map(c => <option key={c.id} value={c.id}>{c.company_name} ({c.city})</option>)}
+                </select>
+                {errors.chinese_company_id && <p className="text-rose-400 text-xs mt-1.5">{errors.chinese_company_id.message}</p>}
+              </div>
+              <div>
+                <label className="form-label">Turk Sirket Sec *</label>
+                <select {...register('turkish_company_id', { required: 'Turk sirket secimi gerekli' })} className="input-field" disabled={turkishCompanies.length === 0}>
+                  <option value="">Turk Sirket Secin</option>
+                  {turkishCompanies.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+                </select>
+                {errors.turkish_company_id && <p className="text-rose-400 text-xs mt-1.5">{errors.turkish_company_id.message}</p>}
+              </div>
+            </div>
           </div>
-        )}
 
-        <div className="card p-8">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Sirket ve Musteri Secimi */}
-            <div className="form-section bg-slate-800/50 border-slate-700">
-              <h3 className="text-lg font-bold text-slate-200 mb-4 border-b border-slate-700 pb-2">
-                Sirket ve Musteri Secimi
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="form-label">Müşteri Seç *</label>
-                  <select {...register('customer_id', { required: 'Müşteri seçimi gereklidir' })} className="input-field" disabled={customers.length === 0}>
-                    <option value="">Müşteri Seçin</option>
-                    {customers.map((c) => <option key={c.id} value={c.id}>{c.full_name} ({c.tc_number})</option>)}
-                  </select>
-                  {errors.customer_id && <p className="text-rose-400 text-xs mt-1.5">{errors.customer_id.message}</p>}
-                </div>
-                <div>
-                  <label className="form-label">Çinli Şirket Seç *</label>
-                  <select {...register('chinese_company_id', { required: 'Çinli şirket seçimi gereklidir' })} className="input-field" disabled={chineseCompanies.length === 0}>
-                    <option value="">Çinli Şirket Seçin</option>
-                    {chineseCompanies.map((c) => <option key={c.id} value={c.id}>{c.company_name} ({c.city})</option>)}
-                  </select>
-                  {errors.chinese_company_id && <p className="text-rose-400 text-xs mt-1.5">{errors.chinese_company_id.message}</p>}
-                </div>
-                <div>
-                  <label className="form-label">Türk Şirket Seç *</label>
-                  <select {...register('turkish_company_id', { required: 'Türk şirket seçimi gereklidir' })} className="input-field" disabled={turkishCompanies.length === 0}>
-                    <option value="">Türk Şirket Seçin</option>
-                    {turkishCompanies.map((c) => <option key={c.id} value={c.id}>{c.company_name}</option>)}
-                  </select>
-                  {errors.turkish_company_id && <p className="text-rose-400 text-xs mt-1.5">{errors.turkish_company_id.message}</p>}
-                </div>
+          {/* Seyahat */}
+          <div className="form-section bg-blue-500/5 border-blue-500/20">
+            <h3 className="text-base font-bold text-blue-400 mb-6">Seyahat Bilgileri</h3>
+            {savedTravels.length > 0 && (
+              <div className="mb-6 p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                <label className="form-label text-blue-300">Kayitli Seyahatleri Getir</label>
+                <select className="input-field" onChange={(e) => handleSavedTravelSelect(e.target.value)} defaultValue="">
+                  <option value="">Kayitli seyahat secin...</option>
+                  {savedTravels.map((t, i) => <option key={i} value={t.travel_name}>{t.travel_name}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="md:col-span-2">
+                <label className="form-label">Seyahat Bilgisi Adi</label>
+                <input {...register('travel_name')} type="text" className="input-field" placeholder="Orn: Guangzhou Ticari Ziyaret 2026" />
+                <p className="text-xs text-slate-600 mt-1">Isim vererek sonraki formlarda tekrar kullanabilirsiniz</p>
+              </div>
+              <div>
+                <label className="form-label">Baslangic Tarihi *</label>
+                <input {...register('travel_start_date', { required: 'Gerekli' })} type="date" className="input-field" min={new Date().toISOString().split('T')[0]} />
+                {errors.travel_start_date && <p className="text-rose-400 text-xs mt-1.5">{errors.travel_start_date.message}</p>}
+              </div>
+              <div>
+                <label className="form-label">Bitis Tarihi *</label>
+                <input {...register('travel_end_date', { required: 'Gerekli' })} type="date" className="input-field" min={new Date().toISOString().split('T')[0]} />
+                {errors.travel_end_date && <p className="text-rose-400 text-xs mt-1.5">{errors.travel_end_date.message}</p>}
+              </div>
+              <div className="md:col-span-2">
+                <label className="form-label">Vize Turu *</label>
+                <select {...register('visa_type', { required: 'Vize turu gerekli' })} className="input-field">
+                  <option value="">Vize Turu Secin</option>
+                  <option value="Commercial and trade activities">Ticari ve Ticaret Faaliyetleri (M)</option>
+                  <option value="Tourism">Turist Vizesi</option>
+                  <option value="Business">Is Vizesi</option>
+                  <option value="Transit">Transit Vize</option>
+                  <option value="Other">Diger</option>
+                </select>
+                {errors.visa_type && <p className="text-rose-400 text-xs mt-1.5">{errors.visa_type.message}</p>}
               </div>
             </div>
+          </div>
 
-            {/* Seyahat Bilgileri */}
-            <div className="form-section bg-indigo-500/5 border-indigo-500/20">
-              <h3 className="text-lg font-bold text-indigo-400 mb-6">
-                ✈️ Seyahat Bilgileri
-              </h3>
+          {/* Vize Detay */}
+          <div className="form-section bg-emerald-500/5 border-emerald-500/20">
+            <h3 className="text-base font-bold text-emerald-400 mb-6">Vize Detay Bilgileri</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div>
+                <label className="form-label">Kac Aylik Vize? *</label>
+                <select {...register('visa_validity_months', { required: 'Gerekli', valueAsNumber: true })} className="input-field">
+                  <option value="">Seciniz</option>
+                  <option value="3">3 Ay</option>
+                  <option value="6">6 Ay</option>
+                  <option value="12">12 Ay</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Kac Gun Kalis? *</label>
+                <input {...register('max_duration_days', { required: 'Gerekli', valueAsNumber: true, min: { value: 1, message: 'En az 1' }, max: { value: 365, message: 'En fazla 365' } })} type="number" className="input-field" placeholder="30" min={1} max={365} />
+              </div>
+              <div>
+                <label className="form-label">Giris Turu *</label>
+                <select {...register('entries_type', { required: 'Gerekli' })} className="input-field">
+                  <option value="">Seciniz</option>
+                  <option value="Single">Single (Tek Giris)</option>
+                  <option value="Double">Double (Cift Giris)</option>
+                  <option value="Multiple">Multiple (Coklu Giris)</option>
+                </select>
+              </div>
+            </div>
+          </div>
 
-              {savedTravels.length > 0 && (
-                <div className="mb-6 p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
-                  <label className="form-label text-indigo-300">Kayıtlı Seyahatleri Getir</label>
-                  <select className="input-field" onChange={(e) => handleSavedTravelSelect(e.target.value)} defaultValue="">
-                    <option value="">Kayıtlı seyahat seçin...</option>
-                    {savedTravels.map((t, i) => <option key={i} value={t.travel_name}>{t.travel_name}</option>)}
-                  </select>
-                  <p className="text-xs text-indigo-400/60 mt-1.5">Daha önce kaydettiğiniz seyahat bilgilerini otomatik doldurun</p>
-                </div>
+          {/* Cin Ziyaret */}
+          <div className="form-section bg-amber-500/5 border-amber-500/20">
+            <h3 className="text-base font-bold text-amber-400 mb-6">Cin Ziyaret Bilgileri</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="md:col-span-2">
+                <label className="form-label">Daha once Cin'e gittiniz mi? *</label>
+                <select {...register('been_to_china', { required: 'Secim gerekli' })} className="input-field">
+                  <option value="">Seciniz</option>
+                  <option value="yes">Evet</option>
+                  <option value="no">Hayir</option>
+                </select>
+              </div>
+              {beenToChina === 'yes' && (
+                <>
+                  <div>
+                    <label className="form-label">Vize No *</label>
+                    <input {...register('china_visa_number')} className="input-field" placeholder="Vize numarasi" />
+                  </div>
+                  <div>
+                    <label className="form-label">Vize Yili *</label>
+                    <input {...register('china_visa_year', { valueAsNumber: true })} type="number" className="input-field" placeholder="2024" />
+                  </div>
+                  <div>
+                    <label className="form-label">Vize Ayi *</label>
+                    <select {...register('china_visa_month', { valueAsNumber: true })} className="input-field">
+                      <option value="">Ay Secin</option>
+                      {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label">Parmak izi verildi mi? *</label>
+                    <select {...register('fingerprint_given')} className="input-field">
+                      <option value="">Seciniz</option>
+                      <option value="yes">Evet</option>
+                      <option value="no">Hayir</option>
+                    </select>
+                  </div>
+                  {fingerprintGiven === 'yes' && (
+                    <div>
+                      <label className="form-label">Parmak Izi Tarihi *</label>
+                      <input {...register('fingerprint_date')} type="date" className="input-field" />
+                    </div>
+                  )}
+                </>
               )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
-                  <label className="form-label">Seyahat Bilgisi Adı</label>
-                  <input {...register('travel_name')} type="text" className="input-field" placeholder="Örn: Guangzhou Ticari Ziyaret 2026" />
-                  <p className="text-xs text-slate-500 mt-1">İsim vererek bu seyahat bilgilerini sonraki formlarda tekrar kullanabilirsiniz</p>
-                </div>
-                <div>
-                  <label className="form-label">Seyahat Başlangıç Tarihi *</label>
-                  <input {...register('travel_start_date', { required: 'Başlangıç tarihi gereklidir' })} type="date" className="input-field" min={new Date().toISOString().split('T')[0]} />
-                  {errors.travel_start_date && <p className="text-rose-400 text-xs mt-1.5">{errors.travel_start_date.message}</p>}
-                </div>
-                <div>
-                  <label className="form-label">Seyahat Bitiş Tarihi *</label>
-                  <input {...register('travel_end_date', { required: 'Bitiş tarihi gereklidir' })} type="date" className="input-field" min={new Date().toISOString().split('T')[0]} />
-                  {errors.travel_end_date && <p className="text-rose-400 text-xs mt-1.5">{errors.travel_end_date.message}</p>}
-                </div>
-                <div className="md:col-span-2">
-                  <label className="form-label">Vize Türü *</label>
-                  <select {...register('visa_type', { required: 'Vize türü gereklidir' })} className="input-field">
-                    <option value="">Vize Türü Seçin</option>
-                    <option value="Commercial and trade activities">Ticari ve Ticaret Faaliyetleri (M)</option>
-                    <option value="Tourism">Turist Vizesi</option>
-                    <option value="Business">İş Vizesi</option>
-                    <option value="Transit">Transit Vize</option>
-                    <option value="Other">Diğer</option>
-                  </select>
-                  {errors.visa_type && <p className="text-rose-400 text-xs mt-1.5">{errors.visa_type.message}</p>}
-                </div>
-              </div>
             </div>
+          </div>
 
-            {/* Vize Detay Bilgileri */}
-            <div className="form-section bg-emerald-500/5 border-emerald-500/20">
-              <h3 className="text-lg font-bold text-emerald-400 mb-6">
-                📋 Vize Detay Bilgileri
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="form-label">Kaç Aylık Vize? *</label>
-                  <select {...register('visa_validity_months', { required: 'Vize geçerlilik süresi gereklidir', valueAsNumber: true })} className="input-field">
-                    <option value="">Seçiniz</option>
-                    <option value="3">3 Ay</option>
-                    <option value="6">6 Ay</option>
-                    <option value="12">12 Ay</option>
-                  </select>
-                  {errors.visa_validity_months && <p className="text-rose-400 text-xs mt-1.5">{errors.visa_validity_months.message}</p>}
-                </div>
-                <div>
-                  <label className="form-label">Kaç Gün Kalış? *</label>
-                  <input
-                    {...register('max_duration_days', { required: 'Kalış süresi gereklidir', valueAsNumber: true, min: { value: 1, message: 'En az 1 gün olmalıdır' }, max: { value: 365, message: 'En fazla 365 gün olabilir' } })}
-                    type="number" className="input-field" placeholder="30" min={1} max={365}
-                  />
-                  <p className="text-xs text-slate-500 mt-1">Varsayılan: 30 gün</p>
-                  {errors.max_duration_days && <p className="text-rose-400 text-xs mt-1.5">{errors.max_duration_days.message}</p>}
-                </div>
-                <div>
-                  <label className="form-label">Giriş Türü *</label>
-                  <select {...register('entries_type', { required: 'Giriş türü gereklidir' })} className="input-field">
-                    <option value="">Seçiniz</option>
-                    <option value="Single">Single (Tek Giriş)</option>
-                    <option value="Double">Double (Çift Giriş)</option>
-                    <option value="Multiple">Multiple (Çoklu Giriş)</option>
-                  </select>
-                  {errors.entries_type && <p className="text-rose-400 text-xs mt-1.5">{errors.entries_type.message}</p>}
-                </div>
-              </div>
-            </div>
-
-            {/* Cin Ziyaret Bilgileri */}
-            <div className="form-section bg-amber-500/5 border-amber-500/20">
-              <h3 className="text-lg font-bold text-amber-400 mb-6">Cin Ziyaret Bilgileri</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
-                  <label className="form-label">Daha once Cin'e gittiniz mi? *</label>
-                  <select {...register('been_to_china', { required: 'Secim gerekli' })} className="input-field">
-                    <option value="">Seciniz</option>
-                    <option value="yes">Evet</option>
-                    <option value="no">Hayir</option>
-                  </select>
-                </div>
-                {beenToChina === 'yes' && (
-                  <>
-                    <div>
-                      <label className="form-label">Vize No *</label>
-                      <input {...register('china_visa_number')} className="input-field" placeholder="Vize numarasi" />
-                    </div>
-                    <div>
-                      <label className="form-label">Vize Yili *</label>
-                      <input {...register('china_visa_year', { valueAsNumber: true })} type="number" className="input-field" placeholder="2024" />
-                    </div>
-                    <div>
-                      <label className="form-label">Vize Ayi *</label>
-                      <select {...register('china_visa_month', { valueAsNumber: true })} className="input-field">
-                        <option value="">Ay Secin</option>
-                        {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <option key={m} value={m}>{m}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="form-label">Parmak izi verildi mi? *</label>
-                      <select {...register('fingerprint_given')} className="input-field">
-                        <option value="">Seciniz</option>
-                        <option value="yes">Evet</option>
-                        <option value="no">Hayir</option>
-                      </select>
-                    </div>
-                    {fingerprintGiven === 'yes' && (
-                      <div>
-                        <label className="form-label">Parmak Izi Tarihi *</label>
-                        <input {...register('fingerprint_date')} type="date" className="input-field" />
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Submit */}
-            <div className="flex justify-end space-x-4 pt-6 border-t border-slate-800">
-              <Link href="/forms" className="btn-secondary">İptal</Link>
-              <button
-                type="submit"
-                disabled={loading || customers.length === 0 || chineseCompanies.length === 0 || turkishCompanies.length === 0}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Oluşturuluyor...' : 'Formu Oluştur'}
-              </button>
-            </div>
-          </form>
-        </div>
+          {/* Submit */}
+          <div className="flex justify-end gap-4 pt-6 border-t border-slate-700/50">
+            <Link href="/forms" className="btn-secondary">Iptal</Link>
+            <button
+              type="submit"
+              disabled={loading || customers.length === 0 || chineseCompanies.length === 0 || turkishCompanies.length === 0}
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Olusturuluyor...' : 'Formu Olustur'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
