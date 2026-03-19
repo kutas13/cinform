@@ -344,7 +344,10 @@ export default function NewFormPage() {
                     <label className="form-label">Vize Ayi *</label>
                     <select {...register('china_visa_month', { valueAsNumber: true })} className="input-field">
                       <option value="">Ay Secin</option>
-                      {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <option key={m} value={m}>{m}</option>)}
+                      {([
+                        [1,'Jan'],[2,'Feb'],[3,'Mar'],[4,'Apr'],[5,'May'],[6,'Jun'],
+                        [7,'Jul'],[8,'Aug'],[9,'Sep'],[10,'Oct'],[11,'Nov'],[12,'Dec']
+                      ] as [number,string][]).map(([m,abbr]) => <option key={m} value={m}>{m} ({abbr})</option>)}
                     </select>
                   </div>
                   <div>
