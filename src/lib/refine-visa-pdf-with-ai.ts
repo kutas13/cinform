@@ -38,10 +38,29 @@ export async function refineVisaPdfWithAi(
 Return ONLY a JSON object with this shape:
 {
   "customer": {
+    "full_name": "string",
+    "birth_year": number,
     "marital_status": "Single|Married|Divorced|Widowed|Other",
     "birth_city": "string",
     "birth_province": "string",
+    "tc_number": "string",
+    "passport_issue_place": "string",
+    "home_address": "string",
+    "phone_number": "string",
     "email": "string",
+    "occupation_type": "owner|employee",
+    "work_start_year": number,
+    "work_start_month": number,
+    "work_end_year": number,
+    "work_end_month": number,
+    "father_first_name": "string",
+    "father_last_name": "string",
+    "father_nationality": "string",
+    "father_birth_date": "yyyy-mm-dd",
+    "mother_first_name": "string",
+    "mother_last_name": "string",
+    "mother_nationality": "string",
+    "mother_birth_date": "yyyy-mm-dd",
     "children_count": number,
     "children_data": [{"first_name":"string","last_name":"string","nationality":"string","birth_date":"yyyy-mm-dd"}]
   },
@@ -55,7 +74,7 @@ Return ONLY a JSON object with this shape:
 }
 
 Rules:
-- Prefer already parsed values if uncertain.
+- Parse directly from PDF text.
 - Fix OCR splits like "T urk iye" or "Please specify" noise.
 - If spouse data exists, marital_status should be Married.
 - Keep output concise and valid JSON only.`
@@ -98,6 +117,10 @@ Rules:
 
   if (ai.customer) {
     const c = ai.customer
+    const fullName = pickString(c.full_name)
+    if (fullName) merged.customer.full_name = fullName
+    const birthYear = pickNumber(c.birth_year)
+    if (birthYear !== undefined) merged.customer.birth_year = birthYear
     const marital = pickString(c.marital_status)
     if (marital && ['Single', 'Married', 'Divorced', 'Widowed', 'Other'].includes(marital)) {
       merged.customer.marital_status = marital as any
@@ -108,6 +131,42 @@ Rules:
     if (birthProvince) merged.customer.birth_province = birthProvince
     const email = pickString(c.email)
     if (email) merged.customer.email = email
+    const tc = pickString(c.tc_number)
+    if (tc) merged.customer.tc_number = tc
+    const issuePlace = pickString(c.passport_issue_place)
+    if (issuePlace) merged.customer.passport_issue_place = issuePlace
+    const homeAddress = pickString(c.home_address)
+    if (homeAddress) merged.customer.home_address = homeAddress
+    const phoneNumber = pickString(c.phone_number)
+    if (phoneNumber) merged.customer.phone_number = phoneNumber
+    const occupationType = pickString(c.occupation_type)
+    if (occupationType === 'owner' || occupationType === 'employee') {
+      merged.customer.occupation_type = occupationType
+    }
+    const workStartYear = pickNumber(c.work_start_year)
+    if (workStartYear !== undefined) merged.customer.work_start_year = workStartYear
+    const workStartMonth = pickNumber(c.work_start_month)
+    if (workStartMonth !== undefined) merged.customer.work_start_month = workStartMonth
+    const workEndYear = pickNumber(c.work_end_year)
+    if (workEndYear !== undefined) merged.customer.work_end_year = workEndYear
+    const workEndMonth = pickNumber(c.work_end_month)
+    if (workEndMonth !== undefined) merged.customer.work_end_month = workEndMonth
+    const fatherFirstName = pickString(c.father_first_name)
+    if (fatherFirstName) merged.customer.father_first_name = fatherFirstName
+    const fatherLastName = pickString(c.father_last_name)
+    if (fatherLastName) merged.customer.father_last_name = fatherLastName
+    const fatherNationality = pickString(c.father_nationality)
+    if (fatherNationality) merged.customer.father_nationality = fatherNationality
+    const fatherBirthDate = pickString(c.father_birth_date)
+    if (fatherBirthDate) merged.customer.father_birth_date = fatherBirthDate
+    const motherFirstName = pickString(c.mother_first_name)
+    if (motherFirstName) merged.customer.mother_first_name = motherFirstName
+    const motherLastName = pickString(c.mother_last_name)
+    if (motherLastName) merged.customer.mother_last_name = motherLastName
+    const motherNationality = pickString(c.mother_nationality)
+    if (motherNationality) merged.customer.mother_nationality = motherNationality
+    const motherBirthDate = pickString(c.mother_birth_date)
+    if (motherBirthDate) merged.customer.mother_birth_date = motherBirthDate
 
     const childrenCount = pickNumber(c.children_count)
     if (childrenCount !== undefined) merged.customer.children_count = childrenCount
