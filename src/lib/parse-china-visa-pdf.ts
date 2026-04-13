@@ -313,7 +313,9 @@ function parseFather(text: string): { nameLine: string; birth: string | null } |
   const block = text.match(/5\.5B[^\n]*Father([\s\S]*?)(?=5\.5C|5\.5D|Mother)/i)
   if (!block) return null
   const sub = block[1]
-  const nm = sub.match(/Name\s+([A-Z][A-Z\s]{2,80}?)\s+Nationality/i)
+  const nm =
+    sub.match(/Name\s+([A-Z][A-Z\s]{2,80}?)\s+Nationality/i) ||
+    sub.match(/Name\s+([A-Z][A-Z\s]{2,80}?)\s+Date of birth/i)
   const birth = sub.match(/Date of birth[^\d]*(\d{4}-\d{2}-\d{2})/i)
   if (!nm) return null
   return { nameLine: normalizeSpaces(nm[1]), birth: birth ? birth[1] : null }
@@ -323,7 +325,9 @@ function parseMother(text: string): { nameLine: string; birth: string | null } |
   const block = text.match(/5\.5C[^\n]*Mother([\s\S]*?)(?=5\.5D|子女|Child)/i)
   if (!block) return null
   const sub = block[1]
-  const nm = sub.match(/Name\s+([A-Z][A-Z\s]{2,80}?)\s+Nationality/i)
+  const nm =
+    sub.match(/Name\s+([A-Z][A-Z\s]{2,80}?)\s+Nationality/i) ||
+    sub.match(/Name\s+([A-Z][A-Z\s]{2,80}?)\s+Date of birth/i)
   const birth = sub.match(/Date of birth[^\d]*(\d{4}-\d{2}-\d{2})/i)
   if (!nm) return null
   return { nameLine: normalizeSpaces(nm[1]), birth: birth ? birth[1] : null }
@@ -467,6 +471,30 @@ function parseChildren(text: string): Array<{ first_name: string; last_name: str
   }
   if (!section) return out
   const compact = normalizeSpaces(section)
+
+  const lineRows = Array.from(
+    section.matchAll(
+      /Name\s+([A-Za-zİĞÜŞÖÇığüşöç][A-Za-zİĞÜŞÖÇığüşöç\s]{1,80}?)\s+Nationality[\s\S]{0,100}?Date of birth\s+(\d{4}-\d{2}-\d{2})/gi
+    )
+  )
+  if (lineRows.length > 0) {
+    const seen = new Set<string>()
+    for (const m of lineRows) {
+      const nameLine = fixErdoGan(normalizeSpaces(m[1])).replace(/[^A-Za-zİĞÜŞÖÇığüşöç\s]/g, ' ')
+      const parts = nameLine.split(/\s+/).filter(Boolean)
+      if (parts.length < 2) continue
+      const key = `${parts.join(' ')}|${m[2]}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push({
+        first_name: parts[0],
+        last_name: parts.slice(1).join(' '),
+        nationality: 'Türkiye',
+        birth_date: m[2],
+      })
+    }
+    if (out.length > 0) return out
+  }
 
   const strictRows = Array.from(
     compact.matchAll(
