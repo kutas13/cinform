@@ -58,6 +58,15 @@ function normalizeSpaces(s: string): string {
   return s.replace(/\s+/g, ' ').trim()
 }
 
+function normalizeNoisyPdfText(s: string): string {
+  return s
+    .replace(/\r\n/g, '\n')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ')
+    .replace(/[^\x20-\x7E\u00C0-\u024F\n]/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+}
+
 function fixErdoGan(s: string): string {
   return s.replace(/\bERDO\s+GAN\b/gi, 'ERDOGAN')
 }
@@ -100,6 +109,41 @@ function parseApplicantFullName(text: string): string | null {
     return fixErdoGan(normalizeSpaces(`${given} ${family}`))
   }
   return fixErdoGan(raw)
+}
+
+function parseApplicantNameFromPassportContext(text: string): string | null {
+  const lines = text
+    .split('\n')
+    .map((l) => normalizeSpaces(l).toUpperCase())
+    .filter(Boolean)
+  const passportIdx = lines.findIndex((l) => /\b[A-Z]\d{8}\b/.test(l))
+  if (passportIdx < 0) return null
+
+  const stopWords = new Set([
+    'MALE',
+    'FEMALE',
+    'SINGLE',
+    'MARRIED',
+    'ORDINARY',
+    'TURKIYE',
+    'TURKIYE OR REGION',
+    'COMPANY EMPLOYEE',
+    'BUSINESSPERSON',
+  ])
+
+  for (let i = passportIdx - 1; i >= Math.max(0, passportIdx - 20); i--) {
+    const line = lines[i]
+    if (!line) continue
+    if (stopWords.has(line)) continue
+    if (/\d/.test(line)) continue
+    if (/VISA|APPLICATION|FORM|REPUBLIC|CHINA|PASSPORT|NUMBER/.test(line)) continue
+    if (!/^[A-Z\s]{4,60}$/.test(line)) continue
+    const words = line.split(/\s+/).filter(Boolean)
+    if (words.length >= 2 && words.length <= 4) {
+      return fixErdoGan(normalizeSpaces(words.join(' ')))
+    }
+  }
+  return null
 }
 
 function parseBirthYear(text: string): number | null {
@@ -472,40 +516,49 @@ function parseChineseInvite(text: string): Partial<PdfImportChineseInvite> | und
 export function parseChinaVisaPdfText(raw: string): ChinaVisaPdfParseResult {
   const warnings: string[] = []
   const text = raw.replace(/\r\n/g, '\n')
+  const noisyNormalizedText = normalizeNoisyPdfText(text)
+  const mixedText = `${text}\n${noisyNormalizedText}`
 
   if (!/Visa Application Form|中华人民共和国签证申请表|PRC|People's Republic/i.test(text)) {
     warnings.push('PDF metni standart Çin vize başvuru formu gibi görünmüyor; sonuçlar şüpheli olabilir.')
   }
 
-  const full_name = parseApplicantFullName(text) || ''
+  const full_name =
+    parseApplicantFullName(text) ||
+    parseApplicantFullName(noisyNormalizedText) ||
+    parseApplicantNameFromPassportContext(noisyNormalizedText) ||
+    ''
   if (!full_name) warnings.push('Ad soyad otomatik bulunamadı.')
 
-  const birth_year = parseBirthYear(text)
+  const birth_year = parseBirthYear(text) || parseBirthYear(noisyNormalizedText)
   if (!birth_year) warnings.push('Doğum yılı bulunamadı.')
 
-  const tc_number = parseTc(text) || ''
+  const tc_number = parseTc(text) || parseTc(noisyNormalizedText) || ''
   if (!tc_number) warnings.push('TC / ulusal kimlik numarası bulunamadı.')
 
-  const marital_status = parseMarital(text) || 'Single'
+  const marital_status = parseMarital(text) || parseMarital(noisyNormalizedText) || 'Single'
 
-  const { province: birth_province, city: birth_city } = parseBirthProvinceCity(text)
+  const { province: birth_province, city: birth_city } = parseBirthProvinceCity(mixedText)
   if (!birth_province) warnings.push('Doğum ili (eyalet) bulunamadı; PDF düzenine göre el ile girin.')
   if (!birth_city) warnings.push('Doğum ilçesi/şehir bulunamadı.')
 
-  const passport_issue_place = parsePassportPlace(text) || ''
+  const passport_issue_place = parsePassportPlace(text) || parsePassportPlace(noisyNormalizedText) || ''
   if (!passport_issue_place) warnings.push('Pasaport veriliş yeri bulunamadı.')
 
-  const home_address = parseHomeAddress(text) || ''
-  const phone_number = parsePhone(text) || ''
-  const email = parseEmail(text) || ''
+  const home_address = parseHomeAddress(text) || parseHomeAddress(noisyNormalizedText) || ''
+  const phone_number = parsePhone(text) || parsePhone(noisyNormalizedText) || ''
+  const email = parseEmail(text) || parseEmail(noisyNormalizedText) || ''
 
-  const fatherP = parseFather(text)
-  const motherP = parseMother(text)
-  const children = parseChildren(text)
+  const fatherP = parseFather(text) || parseFather(noisyNormalizedText)
+  const motherP = parseMother(text) || parseMother(noisyNormalizedText)
+  const children = parseChildren(text).length ? parseChildren(text) : parseChildren(noisyNormalizedText)
   const fSplit = fatherP ? splitPersonName(fatherP.nameLine) : { first: '', last: '' }
   const mSplit = motherP ? splitPersonName(motherP.nameLine) : { first: '', last: '' }
 
-  const workSection = text.match(/3\.2[\s\S]*?(?=四、|4\.|五、|5\.|Education)/i)?.[0] || text
+  const workSection =
+    text.match(/3\.2[\s\S]*?(?=四、|4\.|五、|5\.|Education)/i)?.[0] ||
+    noisyNormalizedText.match(/3\.2[\s\S]*?(?=4\.|5\.|Education)/i)?.[0] ||
+    text
   const work = parseWorkExperienceSection(workSection)
 
   const company_name = fixErdoGan(work.company_name || '')
