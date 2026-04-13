@@ -210,6 +210,39 @@ function parseMarital(text: string): PdfImportCustomer['marital_status'] | null 
 }
 
 function parseBirthProvinceCity(text: string): { province: string; city: string } {
+  const extractAfterMarker = (marker: RegExp, stopWords: string[]): string => {
+    const m = text.match(marker)
+    if (!m) return ''
+    const chunk = (m[1] || '')
+      .split('\n')
+      .map((l) => normalizeSpaces(l).toUpperCase())
+      .filter(Boolean)
+    for (const line of chunk) {
+      const cleaned = line.replace(/[^A-Z\s]/g, ' ')
+      const tokens = cleaned.split(/\s+/).filter(Boolean)
+      const candidate = tokens.filter((t) => !stopWords.includes(t)).join(' ')
+      if (candidate.length >= 3) return candidate
+    }
+    return ''
+  }
+
+  const stopWords = [
+    'MARRIED',
+    'SINGLE',
+    'DIVORCED',
+    'WIDOWED',
+    'OTHER',
+    'PROVINCE',
+    'STATE',
+    'CITY',
+    'TURKIYE',
+  ]
+  const provinceFromMarker = extractAfterMarker(/1\.4B[^\n]*\n([\s\S]{0,120})/i, stopWords)
+  const cityFromMarker = extractAfterMarker(/1\.4C[^\n]*\n([\s\S]{0,120})/i, stopWords)
+  if (provinceFromMarker || cityFromMarker) {
+    return { province: provinceFromMarker, city: cityFromMarker }
+  }
+
   let province = ''
   let city = ''
   const prov = text.match(/1\.4B[^\n]*Province[^\n]*\n[^\n]*?(?:□|☑)?\s*([A-Z][A-Za-zığüşöçİĞÜŞÖÇ\s]{1,40})/i)
@@ -227,13 +260,25 @@ function parseBirthProvinceCity(text: string): { province: string; city: string 
 }
 
 function parsePassportPlace(text: string): string | null {
-  const m = text.match(/Place of issue:\s*\n?\s*☑?\s*[^\n]*?\s+([A-Z][A-Za-z]{2,30})\s*\n/)
-  if (m) return m[1].trim()
-  const m2 = text.match(/Ordinary\s+([A-Z][A-Za-z]{2,30})/)
-  return m2 ? m2[1].trim() : null
+  const block = text.match(/1\.7D[^\n]*Place of issue[^\n]*\n\s*([^\n]+)/i)
+  if (block) {
+    const cleaned = normalizeSpaces(block[1]).replace(/[^A-Za-z\s]/g, ' ').toUpperCase()
+    const tokens = cleaned.split(/\s+/).filter(Boolean).filter((t) => t !== 'ORDINARY' && t !== 'PLACE' && t !== 'ISSUE')
+    if (tokens.length > 0) return tokens.join(' ')
+  }
+
+  const m2 = text.match(/Ordinary\s+([A-Z][A-Za-z\s]{2,40})/i)
+  if (m2) {
+    const cleaned = normalizeSpaces(m2[1]).replace(/[^A-Za-z\s]/g, ' ').toUpperCase()
+    const tokens = cleaned.split(/\s+/).filter(Boolean).filter((t) => t !== 'ORDINARY')
+    if (tokens.length > 0) return tokens.join(' ')
+  }
+  return null
 }
 
 function parseHomeAddress(text: string): string | null {
+  const m0 = text.match(/5\.1[^\n]*Current residence address[^\n]*\s+([^\n]+)\s*(?:\n|$)/i)
+  if (m0) return normalizeSpaces(m0[1])
   const m = text.match(/Current residence address\s+([\s\S]+?)(?:\s*5\.2|\n\s*5\.2)/i)
   if (m) return normalizeSpaces(m[1].replace(/\s*5\.2.*$/i, ''))
   const m2 = text.match(/5\.1[^\n]*address\s+(.+)/i)
@@ -241,6 +286,11 @@ function parseHomeAddress(text: string): string | null {
 }
 
 function parsePhone(text: string): string | null {
+  const m0 = text.match(/5\.2[^\n]*Phone number[^\n]*\s+([0-9+\s()-]{8,24})/i)
+  if (m0) {
+    const n = normalizePhoneValue(m0[1])
+    if (n.length >= 10) return n
+  }
   const block = text.match(/5\.2[^\n]*Phone number[^\n]*\n\s*([0-9+\s()-]{8,24})/i)
   if (block) {
     const normalized = normalizePhoneValue(block[1])
@@ -253,6 +303,8 @@ function parsePhone(text: string): string | null {
 }
 
 function parseEmail(text: string): string | null {
+  const m0 = text.match(/5\.4[^\n]*E-mail address[^\n]*\s+([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i)
+  if (m0) return m0[1]
   const m = text.match(/E-mail address[：:\s]*\n?\s*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i)
   return m ? m[1] : null
 }
@@ -261,7 +313,7 @@ function parseFather(text: string): { nameLine: string; birth: string | null } |
   const block = text.match(/5\.5B[^\n]*Father([\s\S]*?)(?=5\.5C|5\.5D|Mother)/i)
   if (!block) return null
   const sub = block[1]
-  const nm = sub.match(/Name\s+([A-Z][^\n]+?)\s+国籍/i)
+  const nm = sub.match(/Name\s+([A-Z][A-Z\s]{2,80}?)\s+Nationality/i)
   const birth = sub.match(/Date of birth[^\d]*(\d{4}-\d{2}-\d{2})/i)
   if (!nm) return null
   return { nameLine: normalizeSpaces(nm[1]), birth: birth ? birth[1] : null }
@@ -271,7 +323,7 @@ function parseMother(text: string): { nameLine: string; birth: string | null } |
   const block = text.match(/5\.5C[^\n]*Mother([\s\S]*?)(?=5\.5D|子女|Child)/i)
   if (!block) return null
   const sub = block[1]
-  const nm = sub.match(/Name\s+([A-Z][^\n]+?)\s+国籍/i)
+  const nm = sub.match(/Name\s+([A-Z][A-Z\s]{2,80}?)\s+Nationality/i)
   const birth = sub.match(/Date of birth[^\d]*(\d{4}-\d{2}-\d{2})/i)
   if (!nm) return null
   return { nameLine: normalizeSpaces(nm[1]), birth: birth ? birth[1] : null }
@@ -415,6 +467,30 @@ function parseChildren(text: string): Array<{ first_name: string; last_name: str
   }
   if (!section) return out
   const compact = normalizeSpaces(section)
+
+  const strictRows = Array.from(
+    compact.matchAll(
+      /Name\s+([A-Za-zİĞÜŞÖÇığüşöç][A-Za-zİĞÜŞÖÇığüşöç\s]{1,80}?)\s+Nationality\s+(?:Türkiye|Turkey|TURKIYE|TÜRKİYE)?\s*Date of birth\s+(\d{4}-\d{2}-\d{2})/gi
+    )
+  )
+  if (strictRows.length > 0) {
+    const seen = new Set<string>()
+    for (const m of strictRows) {
+      const nameLine = fixErdoGan(normalizeSpaces(m[1])).replace(/[^A-Za-zİĞÜŞÖÇığüşöç\s]/g, ' ')
+      const parts = nameLine.split(/\s+/).filter(Boolean)
+      if (parts.length < 2) continue
+      const key = `${parts.join(' ')}|${m[2]}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push({
+        first_name: parts[0],
+        last_name: parts.slice(1).join(' '),
+        nationality: 'Türkiye',
+        birth_date: m[2],
+      })
+    }
+    if (out.length > 0) return out
+  }
 
   // Primary pattern: "NAME SURNAME Türkiye YYYY-MM-DD"
   const rxPrimary =
