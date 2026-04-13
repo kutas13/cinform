@@ -15,12 +15,16 @@ import {
 
 export default function VisaPdfImportCard() {
   const inputRef = useRef<HTMLInputElement>(null)
+  const selectedModeRef = useRef<'new' | 'legacy'>('new')
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [lastResult, setLastResult] = useState<ChinaVisaPdfParseResult | null>(null)
   const [showTargetModal, setShowTargetModal] = useState(false)
 
-  const onPick = () => inputRef.current?.click()
+  const onPick = (mode: 'new' | 'legacy') => {
+    selectedModeRef.current = mode
+    inputRef.current?.click()
+  }
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -36,6 +40,7 @@ export default function VisaPdfImportCard() {
     try {
       const fd = new FormData()
       fd.append('file', file)
+      fd.append('mode', selectedModeRef.current)
       const res = await fetch('/api/parse-visa-pdf', { method: 'POST', body: fd })
       const data = await res.json().catch(() => ({}))
 
@@ -103,11 +108,19 @@ export default function VisaPdfImportCard() {
           />
           <button
             type="button"
-            onClick={onPick}
+            onClick={() => onPick('new')}
             disabled={loading}
             className="btn-primary whitespace-nowrap disabled:opacity-50"
           >
-            {loading ? 'Okunuyor...' : 'PDF seç'}
+            {loading ? 'Okunuyor...' : 'Yeni PDF yukle'}
+          </button>
+          <button
+            type="button"
+            onClick={() => onPick('legacy')}
+            disabled={loading}
+            className="btn-secondary whitespace-nowrap disabled:opacity-50"
+          >
+            {loading ? 'Okunuyor...' : 'Eski PDF yukle'}
           </button>
           <div className="flex flex-wrap gap-2">
             <Link href="/customers/new" className="text-xs text-violet-300 hover:text-violet-200 underline">

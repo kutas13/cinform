@@ -537,13 +537,18 @@ function parseChineseInvite(text: string): Partial<PdfImportChineseInvite> | und
   }
 }
 
-export function parseChinaVisaPdfText(raw: string): ChinaVisaPdfParseResult {
+export function parseChinaVisaPdfText(
+  raw: string,
+  options?: { preferLegacy?: boolean }
+): ChinaVisaPdfParseResult {
   const warnings: string[] = []
+  const preferLegacy = options?.preferLegacy === true
   const text = raw.replace(/\r\n/g, '\n')
   const noisyNormalizedText = normalizeNoisyPdfText(text)
   const mixedText = `${text}\n${noisyNormalizedText}`
 
   if (
+    !preferLegacy &&
     !/Visa Application Form|中华人民共和国签证申请表|PRC|People's Republic|Personal Information|Type of Visa|Work Information/i.test(
       mixedText
     )
@@ -552,10 +557,10 @@ export function parseChinaVisaPdfText(raw: string): ChinaVisaPdfParseResult {
   }
 
   const full_name =
-    parseApplicantFullName(text) ||
-    parseApplicantFullName(noisyNormalizedText) ||
-    parseApplicantNameFromPassportContext(noisyNormalizedText) ||
+    (preferLegacy ? parseApplicantFullName(noisyNormalizedText) : parseApplicantFullName(text)) ||
+    (preferLegacy ? parseApplicantFullName(text) : parseApplicantFullName(noisyNormalizedText)) ||
     parseApplicantNameFromGenderBlock(noisyNormalizedText) ||
+    parseApplicantNameFromPassportContext(noisyNormalizedText) ||
     ''
   if (!full_name) warnings.push('Ad soyad otomatik bulunamadı.')
 
