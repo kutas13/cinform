@@ -146,6 +146,30 @@ function parseApplicantNameFromPassportContext(text: string): string | null {
   return null
 }
 
+function parseApplicantNameFromGenderBlock(text: string): string | null {
+  const upper = text.toUpperCase()
+
+  const aroundGender = upper.match(
+    /([A-Z][A-Z\s]{3,60})\s+(?:MALE|FEMALE)\s+\d{4}[-/.]\d{2}[-/.]\d{2}/
+  )
+  if (aroundGender) {
+    const candidate = fixErdoGan(normalizeSpaces(aroundGender[1]))
+    const words = candidate.split(/\s+/).filter(Boolean)
+    if (words.length >= 2 && words.length <= 4) return candidate
+  }
+
+  const aroundPassport = upper.match(
+    /\b(?:[A-Z]\d{8}|[A-Z]{1,2}\d{7,8})\b[\s\S]{0,180}?\b([A-Z][A-Z\s]{3,60})\b[\s\S]{0,80}?\b(?:MALE|FEMALE)\b/
+  )
+  if (aroundPassport) {
+    const candidate = fixErdoGan(normalizeSpaces(aroundPassport[1]))
+    const words = candidate.split(/\s+/).filter(Boolean)
+    if (words.length >= 2 && words.length <= 4) return candidate
+  }
+
+  return null
+}
+
 function parseBirthYear(text: string): number | null {
   const m = text.match(/Date of birth[^\d]{0,40}(\d{4})-(\d{2})-(\d{2})/i)
   if (!m) return null
@@ -519,7 +543,11 @@ export function parseChinaVisaPdfText(raw: string): ChinaVisaPdfParseResult {
   const noisyNormalizedText = normalizeNoisyPdfText(text)
   const mixedText = `${text}\n${noisyNormalizedText}`
 
-  if (!/Visa Application Form|中华人民共和国签证申请表|PRC|People's Republic/i.test(text)) {
+  if (
+    !/Visa Application Form|中华人民共和国签证申请表|PRC|People's Republic|Personal Information|Type of Visa|Work Information/i.test(
+      mixedText
+    )
+  ) {
     warnings.push('PDF metni standart Çin vize başvuru formu gibi görünmüyor; sonuçlar şüpheli olabilir.')
   }
 
@@ -527,6 +555,7 @@ export function parseChinaVisaPdfText(raw: string): ChinaVisaPdfParseResult {
     parseApplicantFullName(text) ||
     parseApplicantFullName(noisyNormalizedText) ||
     parseApplicantNameFromPassportContext(noisyNormalizedText) ||
+    parseApplicantNameFromGenderBlock(noisyNormalizedText) ||
     ''
   if (!full_name) warnings.push('Ad soyad otomatik bulunamadı.')
 
