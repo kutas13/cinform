@@ -202,10 +202,12 @@ function parseTc(text: string): string | null {
 }
 
 function parseMarital(text: string): PdfImportCustomer['marital_status'] | null {
-  if (/☑\s*[^\n]*(?:单身|Single)/i.test(text) || /\bSingle\b[^\n]{0,40}☑/i.test(text)) return 'Single'
-  if (/☑\s*[^\n]*(?:已婚|Married)/i.test(text)) return 'Married'
-  if (/☑\s*[^\n]*(?:离异|Divorced)/i.test(text)) return 'Divorced'
-  if (/☑\s*[^\n]*(?:丧偶|Widowed)/i.test(text)) return 'Widowed'
+  const checked = '(?:☑|√|✓|■|\\[x\\]|\\(x\\)|\\(X\\)|x)'
+  if (new RegExp(`${checked}\\s*[^\\n]*(?:已婚|Married)`, 'i').test(text)) return 'Married'
+  if (new RegExp(`${checked}\\s*[^\\n]*(?:单身|Single)`, 'i').test(text) || /\bSingle\b[^\n]{0,40}(?:☑|√|✓|■)/i.test(text)) return 'Single'
+  if (new RegExp(`${checked}\\s*[^\\n]*(?:离异|Divorced)`, 'i').test(text)) return 'Divorced'
+  if (new RegExp(`${checked}\\s*[^\\n]*(?:丧偶|Widowed)`, 'i').test(text)) return 'Widowed'
+  if (/5\.5A[\s\S]{0,280}Name\s+[A-Z]/i.test(text)) return 'Married'
   return null
 }
 
@@ -221,7 +223,7 @@ function parseBirthProvinceCity(text: string): { province: string; city: string 
       const cleaned = line.replace(/[^A-Z\s]/g, ' ')
       const tokens = cleaned.split(/\s+/).filter(Boolean)
       const candidate = tokens.filter((t) => !stopWords.includes(t)).join(' ')
-      if (candidate.length >= 3) return candidate
+      if (candidate.length >= 3 && !/^PLEASE\s*SPECIFY$/i.test(candidate)) return candidate
     }
     return ''
   }
@@ -236,6 +238,10 @@ function parseBirthProvinceCity(text: string): { province: string; city: string 
     'STATE',
     'CITY',
     'TURKIYE',
+    'PLEASE',
+    'SPECIFY',
+    'PLEASESPECIFY',
+    'OTHER',
   ]
   const provinceFromMarker = extractAfterMarker(/1\.4B[^\n]*\n([\s\S]{0,120})/i, stopWords)
   const cityFromMarker = extractAfterMarker(/1\.4C[^\n]*\n([\s\S]{0,120})/i, stopWords)
@@ -471,6 +477,20 @@ function parseChildren(text: string): Array<{ first_name: string; last_name: str
   }
   if (!section) return out
   const compact = normalizeSpaces(section)
+  const cleanChildName = (raw: string): string => {
+    const fixedCountry = raw
+      .replace(/\bT[UÜ]RK\s*IYE\b/gi, 'TURKIYE')
+      .replace(/\bTURK[Iİ]YE\b/gi, 'TURKIYE')
+    const noCountry = fixedCountry.replace(/\bTURKIYE\b/gi, ' ')
+    return fixErdoGan(normalizeSpaces(noCountry)).replace(/[^A-Za-zİĞÜŞÖÇığüşöç\s]/g, ' ')
+  }
+  const isInvalidName = (nameLine: string): boolean => {
+    const n = normalizeSpaces(nameLine).toUpperCase()
+    if (!n) return true
+    if (/^TURK(?:IYE)?$/.test(n)) return true
+    if (/^(PLEASE|SPECIFY|NAME|NATIONALITY|DATE|BIRTH)/.test(n)) return true
+    return false
+  }
 
   const lineRows = Array.from(
     section.matchAll(
@@ -480,7 +500,8 @@ function parseChildren(text: string): Array<{ first_name: string; last_name: str
   if (lineRows.length > 0) {
     const seen = new Set<string>()
     for (const m of lineRows) {
-      const nameLine = fixErdoGan(normalizeSpaces(m[1])).replace(/[^A-Za-zİĞÜŞÖÇığüşöç\s]/g, ' ')
+      const nameLine = cleanChildName(m[1])
+      if (isInvalidName(nameLine)) continue
       const parts = nameLine.split(/\s+/).filter(Boolean)
       if (parts.length < 2) continue
       const key = `${parts.join(' ')}|${m[2]}`
@@ -504,7 +525,8 @@ function parseChildren(text: string): Array<{ first_name: string; last_name: str
   if (strictRows.length > 0) {
     const seen = new Set<string>()
     for (const m of strictRows) {
-      const nameLine = fixErdoGan(normalizeSpaces(m[1])).replace(/[^A-Za-zİĞÜŞÖÇığüşöç\s]/g, ' ')
+      const nameLine = cleanChildName(m[1])
+      if (isInvalidName(nameLine)) continue
       const parts = nameLine.split(/\s+/).filter(Boolean)
       if (parts.length < 2) continue
       const key = `${parts.join(' ')}|${m[2]}`
@@ -524,7 +546,8 @@ function parseChildren(text: string): Array<{ first_name: string; last_name: str
   const rxPrimary =
     /([A-Za-zİĞÜŞÖÇığüşöç][A-Za-zİĞÜŞÖÇığüşöç\s]{1,80}?)\s+(Türkiye|Turkey|TURKIYE|TÜRKİYE)\s+(\d{4}-\d{2}-\d{2})/gi
   for (const m of Array.from(compact.matchAll(rxPrimary))) {
-    const nameLine = fixErdoGan(normalizeSpaces(m[1]))
+    const nameLine = cleanChildName(m[1])
+    if (isInvalidName(nameLine)) continue
     const parts = nameLine.split(/\s+/).filter(Boolean)
     if (parts.length < 2) continue
     out.push({
@@ -539,7 +562,8 @@ function parseChildren(text: string): Array<{ first_name: string; last_name: str
   const rxTable =
     /Name\s*([A-Za-zİĞÜŞÖÇığüşöç][A-Za-zİĞÜŞÖÇığüşöç\s]{1,80}?)\s+Nationality\s*(Türkiye|Turkey|TURKIYE|TÜRKİYE)\s+Date of birth\s*(\d{4}-\d{2}-\d{2})/gi
   for (const m of Array.from(compact.matchAll(rxTable))) {
-    const nameLine = fixErdoGan(normalizeSpaces(m[1]))
+    const nameLine = cleanChildName(m[1])
+    if (isInvalidName(nameLine)) continue
     const parts = nameLine.split(/\s+/).filter(Boolean)
     if (parts.length < 2) continue
     out.push({
@@ -594,10 +618,7 @@ function parseChildren(text: string): Array<{ first_name: string; last_name: str
     }
 
     if (!nameLine) continue
-    const parts = fixErdoGan(normalizeSpaces(nameLine))
-      .replace(/[^A-Za-zİĞÜŞÖÇığüşöç\s]/g, ' ')
-      .split(/\s+/)
-      .filter(Boolean)
+    const parts = cleanChildName(nameLine).split(/\s+/).filter(Boolean)
     if (parts.length < 2) continue
 
     const key = `${parts.join(' ')}|${birth_date}`
@@ -621,7 +642,8 @@ function parseChildren(text: string): Array<{ first_name: string; last_name: str
   const finalOut: Array<{ first_name: string; last_name: string; nationality: string; birth_date: string }> = []
   const finalSeen = new Set<string>()
   for (const m of Array.from(regionCompact.matchAll(rxLastResort))) {
-    const nameLine = fixErdoGan(normalizeSpaces(m[1]))
+    const nameLine = cleanChildName(m[1])
+    if (isInvalidName(nameLine)) continue
     const parts = nameLine.split(/\s+/).filter(Boolean)
     if (parts.length < 2) continue
     const birthYear = parseInt(m[2].slice(0, 4), 10)
