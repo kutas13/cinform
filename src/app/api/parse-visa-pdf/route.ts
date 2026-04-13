@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { parseChinaVisaPdfText } from '@/lib/parse-china-visa-pdf'
+import { refineVisaPdfWithAi } from '@/lib/refine-visa-pdf-with-ai'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -46,7 +47,17 @@ export async function POST(request: Request) {
       )
     }
 
-    const parsed = parseChinaVisaPdfText(text)
+    let parsed = parseChinaVisaPdfText(text)
+    const apiKey = process.env.OPENAI_API_KEY
+    if (apiKey) {
+      try {
+        parsed = await refineVisaPdfWithAi(text, parsed, apiKey)
+      } catch (aiError) {
+        console.error('[parse-visa-pdf][ai-refine]', aiError)
+        parsed.warnings = [...(parsed.warnings || []), 'AI düzeltme adımı atlandı.']
+      }
+    }
+
     return NextResponse.json(parsed)
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Bilinmeyen hata'
