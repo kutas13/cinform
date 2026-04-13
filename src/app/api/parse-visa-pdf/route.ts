@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { refineVisaPdfWithAi } from '@/lib/refine-visa-pdf-with-ai'
-import type { ChinaVisaPdfParseResult } from '@/lib/parse-china-visa-pdf'
+import { parseChinaVisaPdfText } from '@/lib/parse-china-visa-pdf'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -47,26 +47,17 @@ export async function POST(request: Request) {
       )
     }
 
+    let parsed = parseChinaVisaPdfText(text)
     const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'OPENAI_API_KEY eksik' }, { status: 500 })
-    }
-
-    const emptyResult: ChinaVisaPdfParseResult = {
-      customer: {},
-      turkishCompany: {},
-      warnings: [],
-    }
-
-    let parsed = emptyResult
-    try {
-      parsed = await refineVisaPdfWithAi(text, emptyResult, apiKey)
-    } catch (aiError) {
-      console.error('[parse-visa-pdf][ai-only]', aiError)
-      return NextResponse.json(
-        { error: 'Yapay zeka PDF ayrıştırma sırasında hata verdi' },
-        { status: 502 }
-      )
+    if (apiKey) {
+      try {
+        parsed = await refineVisaPdfWithAi(text, parsed, apiKey)
+      } catch (aiError) {
+        console.error('[parse-visa-pdf][ai-refine-fallback-regex]', aiError)
+        parsed.warnings = [...(parsed.warnings || []), 'AI adımı başarısız oldu; regex sonucu kullanıldı.']
+      }
+    } else {
+      parsed.warnings = [...(parsed.warnings || []), 'OPENAI_API_KEY bulunamadı; regex sonucu kullanıldı.']
     }
 
     return NextResponse.json(parsed)

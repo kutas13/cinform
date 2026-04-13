@@ -6,6 +6,16 @@ type AiRefineResult = {
   warnings?: string[]
 }
 
+type ResponsesApiPayload = {
+  output_text?: string
+  output?: Array<{
+    content?: Array<{
+      type?: string
+      text?: string
+    }>
+  }>
+}
+
 function pickString(v: unknown): string | undefined {
   if (typeof v !== 'string') return undefined
   const s = v.trim()
@@ -27,6 +37,17 @@ function extractJsonObject(text: string): AiRefineResult | null {
   } catch {
     return null
   }
+}
+
+function extractModelText(data: ResponsesApiPayload): string {
+  if (typeof data.output_text === 'string' && data.output_text.trim()) return data.output_text
+  const pieces: string[] = []
+  for (const item of data.output || []) {
+    for (const part of item.content || []) {
+      if (typeof part.text === 'string' && part.text.trim()) pieces.push(part.text)
+    }
+  }
+  return pieces.join('\n')
 }
 
 export async function refineVisaPdfWithAi(
@@ -103,8 +124,8 @@ Rules:
   })
 
   if (!res.ok) return parsed
-  const data = (await res.json()) as { output_text?: string }
-  const raw = data.output_text || ''
+  const data = (await res.json()) as ResponsesApiPayload
+  const raw = extractModelText(data)
   const ai = extractJsonObject(raw)
   if (!ai) return parsed
 
