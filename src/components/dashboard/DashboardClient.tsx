@@ -10,7 +10,6 @@ import {
   PlusIcon,
   ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline'
-import VisaPdfImportCard from '@/components/dashboard/VisaPdfImportCard'
 
 interface DashboardStats {
   customers: number
@@ -84,8 +83,6 @@ export default function DashboardClient({ stats, user }: DashboardClientProps) {
           Cin vize basvuru yonetim paneline hosgeldiniz. Bugun ne yapmak istersiniz?
         </p>
       </div>
-
-      <VisaPdfImportCard />
 
       {/* Overview bar */}
       <div className="card p-5 mb-8 flex items-center gap-6 overflow-x-auto">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
@@ -8,7 +8,6 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { VISA_PDF_CUSTOMER_BACKUP_KEY, VISA_PDF_CUSTOMER_KEY } from '@/lib/visa-pdf-import-storage'
 
 interface CustomerForm {
   full_name: string
@@ -45,8 +44,6 @@ interface CustomerForm {
 export default function NewCustomerPage() {
   const [loading, setLoading] = useState(false)
   const [tcDuplicate, setTcDuplicate] = useState<{ full_name: string; tc_number: string } | null>(null)
-  const [importedChildren, setImportedChildren] = useState<Array<Record<string, unknown>>>([])
-  const importedChildrenAppliedRef = useRef(false)
   const { user } = useAuth()
   const router = useRouter()
   const supabase = createBrowserClient(
@@ -57,8 +54,6 @@ export default function NewCustomerPage() {
   const {
     register,
     handleSubmit,
-    reset,
-    setValue,
     watch,
     formState: { errors },
   } = useForm<CustomerForm>({
@@ -76,78 +71,9 @@ export default function NewCustomerPage() {
   }
 
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const raw =
-      sessionStorage.getItem(VISA_PDF_CUSTOMER_KEY) || localStorage.getItem(VISA_PDF_CUSTOMER_BACKUP_KEY)
-    if (!raw) return
-    let data: Record<string, unknown>
-    try {
-      data = JSON.parse(raw)
-    } catch {
-      sessionStorage.removeItem(VISA_PDF_CUSTOMER_KEY)
-      localStorage.removeItem(VISA_PDF_CUSTOMER_BACKUP_KEY)
-      return
-    }
-    sessionStorage.removeItem(VISA_PDF_CUSTOMER_KEY)
-    localStorage.removeItem(VISA_PDF_CUSTOMER_BACKUP_KEY)
-
-    const childrenData = Array.isArray(data.children_data)
-      ? (data.children_data as Array<Record<string, unknown>>)
-      : []
-
-    setImportedChildren(childrenData)
-    importedChildrenAppliedRef.current = false
-
-    reset({
-      full_name: (data.full_name as string) || '',
-      birth_year: typeof data.birth_year === 'number' ? data.birth_year : (undefined as unknown as number),
-      birth_city: (data.birth_city as string) || '',
-      birth_province: (data.birth_province as string) || '',
-      tc_number: (data.tc_number as string) || '',
-      marital_status: (data.marital_status as CustomerForm['marital_status']) || ('' as CustomerForm['marital_status']),
-      passport_issue_place: (data.passport_issue_place as string) || '',
-      home_address: (data.home_address as string) || '',
-      phone_number: (data.phone_number as string) || '',
-      email: (data.email as string) || '',
-      occupation_type:
-        (data.occupation_type as CustomerForm['occupation_type']) || ('' as CustomerForm['occupation_type']),
-      work_start_year: typeof data.work_start_year === 'number' ? data.work_start_year : (undefined as unknown as number),
-      work_start_month:
-        typeof data.work_start_month === 'number' ? data.work_start_month : (undefined as unknown as number),
-      work_end_year: typeof data.work_end_year === 'number' ? data.work_end_year : undefined,
-      work_end_month: typeof data.work_end_month === 'number' ? data.work_end_month : undefined,
-      father_first_name: (data.father_first_name as string) || '',
-      father_last_name: (data.father_last_name as string) || '',
-      father_nationality: (data.father_nationality as string) || 'Türkiye',
-      father_birth_date: (data.father_birth_date as string) || '',
-      mother_first_name: (data.mother_first_name as string) || '',
-      mother_last_name: (data.mother_last_name as string) || '',
-      mother_nationality: (data.mother_nationality as string) || 'Türkiye',
-      mother_birth_date: (data.mother_birth_date as string) || '',
-      children_count: typeof data.children_count === 'number' ? data.children_count : childrenData.length,
-    } as CustomerForm)
-    toast.success('PDF’den gelen musteri alanlari yuklendi; lutfen kontrol edin.')
-  }, [reset])
-
   const maritalStatus = watch('marital_status')
   const rawChildrenCount = watch('children_count')
   const childrenCount = Number(rawChildrenCount) || 0
-
-  useEffect(() => {
-    if (!importedChildren.length) return
-    if (childrenCount <= 0) return
-    if (importedChildrenAppliedRef.current) return
-    if (childrenCount < importedChildren.length) return
-
-    importedChildren.forEach((child, i) => {
-      setValue(`children_${i}_first_name` as any, normalizeAiText((child.first_name as string) || ''))
-      setValue(`children_${i}_last_name` as any, normalizeAiText((child.last_name as string) || ''))
-      setValue(`children_${i}_birth_date` as any, (child.birth_date as string) || '')
-    })
-
-    importedChildrenAppliedRef.current = true
-  }, [importedChildren, childrenCount, setValue])
 
   const checkTcDuplicate = useCallback(async (tc: string) => {
     if (!tc || tc.length !== 11 || !user) { setTcDuplicate(null); return }
