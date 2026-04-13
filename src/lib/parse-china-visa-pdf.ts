@@ -97,6 +97,17 @@ function parseApplicantFullName(text: string): string | null {
     return normalizeSpaces(`${given} ${family}`)
   }
 
+  const rowStyle = text.match(/1\.1A[^\n]*1\.1B[^\n]*\n\s*([A-Z][A-Z\s]{3,80})/i)
+  if (rowStyle) {
+    const nameLine = fixErdoGan(normalizeSpaces(rowStyle[1]))
+    const parts = nameLine.split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) {
+      const given = parts[parts.length - 1]
+      const family = parts.slice(0, -1).join(' ')
+      return normalizeSpaces(`${given} ${family}`)
+    }
+  }
+
   const m = text.match(
     /Given name\(s\)[）)]?\s*[：:]\s*(?:1\.1C[^\n]*)?\s*\n\s*([A-Z][A-Z0-9\s]{2,80})/im
   )
@@ -108,7 +119,9 @@ function parseApplicantFullName(text: string): string | null {
     const family = parts.slice(0, -1).join(' ')
     return fixErdoGan(normalizeSpaces(`${given} ${family}`))
   }
-  return fixErdoGan(raw)
+  const cleaned = fixErdoGan(raw)
+  if (/^[A-Z][A-Z\s]{3,80}$/.test(cleaned)) return cleaned
+  return null
 }
 
 function parseApplicantNameFromPassportContext(text: string): string | null {
@@ -537,18 +550,13 @@ function parseChineseInvite(text: string): Partial<PdfImportChineseInvite> | und
   }
 }
 
-export function parseChinaVisaPdfText(
-  raw: string,
-  options?: { preferLegacy?: boolean }
-): ChinaVisaPdfParseResult {
+export function parseChinaVisaPdfText(raw: string): ChinaVisaPdfParseResult {
   const warnings: string[] = []
-  const preferLegacy = options?.preferLegacy === true
   const text = raw.replace(/\r\n/g, '\n')
   const noisyNormalizedText = normalizeNoisyPdfText(text)
   const mixedText = `${text}\n${noisyNormalizedText}`
 
   if (
-    !preferLegacy &&
     !/Visa Application Form|中华人民共和国签证申请表|PRC|People's Republic|Personal Information|Type of Visa|Work Information/i.test(
       mixedText
     )
@@ -557,8 +565,8 @@ export function parseChinaVisaPdfText(
   }
 
   const full_name =
-    (preferLegacy ? parseApplicantFullName(noisyNormalizedText) : parseApplicantFullName(text)) ||
-    (preferLegacy ? parseApplicantFullName(text) : parseApplicantFullName(noisyNormalizedText)) ||
+    parseApplicantFullName(text) ||
+    parseApplicantFullName(noisyNormalizedText) ||
     parseApplicantNameFromGenderBlock(noisyNormalizedText) ||
     parseApplicantNameFromPassportContext(noisyNormalizedText) ||
     ''

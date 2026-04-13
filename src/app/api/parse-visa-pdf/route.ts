@@ -17,9 +17,6 @@ export async function POST(request: Request) {
 
     const form = await request.formData()
     const file = form.get('file')
-    const modeRaw = form.get('mode')
-    const mode = typeof modeRaw === 'string' ? modeRaw : 'new'
-    const preferLegacy = mode === 'legacy'
     if (!file || !(file instanceof Blob)) {
       return NextResponse.json({ error: 'file alanı gerekli' }, { status: 400 })
     }
@@ -49,7 +46,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const parsed = parseChinaVisaPdfText(text, { preferLegacy })
+    const parsed = parseChinaVisaPdfText(text)
     return NextResponse.json(parsed)
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Bilinmeyen hata'
