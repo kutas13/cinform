@@ -32,15 +32,9 @@ export async function POST(request: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer())
 
-    const { PDFParse } = await import('pdf-parse')
-    const parser = new PDFParse({ data: new Uint8Array(buffer) })
-    let text = ''
-    try {
-      const result = await parser.getText()
-      text = result.text || ''
-    } finally {
-      await parser.destroy?.()
-    }
+    const pdfParse = (await import('pdf-parse')).default
+    const result = await pdfParse(buffer)
+    const text = result.text || ''
 
     if (!text || text.trim().length < 80) {
       return NextResponse.json(

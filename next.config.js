@@ -4,7 +4,7 @@ const nextConfig = {
     domains: [],
   },
   experimental: {
-    serverComponentsExternalPackages: ['pdf-parse', 'pdfjs-dist'],
+    serverComponentsExternalPackages: ['pdf-parse'],
   },
 }
 
