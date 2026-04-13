@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
@@ -8,6 +8,10 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import {
+  VISA_PDF_TURKISH_COMPANY_BACKUP_KEY,
+  VISA_PDF_TURKISH_COMPANY_KEY,
+} from '@/lib/visa-pdf-import-storage'
 
 interface TurkishCompanyForm {
   company_name: string
@@ -26,7 +30,32 @@ export default function NewTurkishCompanyPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const { register, handleSubmit, formState: { errors } } = useForm<TurkishCompanyForm>()
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<TurkishCompanyForm>()
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const raw =
+      sessionStorage.getItem(VISA_PDF_TURKISH_COMPANY_KEY) ||
+      localStorage.getItem(VISA_PDF_TURKISH_COMPANY_BACKUP_KEY)
+    if (!raw) return
+    let data: Record<string, unknown>
+    try {
+      data = JSON.parse(raw)
+    } catch {
+      sessionStorage.removeItem(VISA_PDF_TURKISH_COMPANY_KEY)
+      localStorage.removeItem(VISA_PDF_TURKISH_COMPANY_BACKUP_KEY)
+      return
+    }
+    sessionStorage.removeItem(VISA_PDF_TURKISH_COMPANY_KEY)
+    localStorage.removeItem(VISA_PDF_TURKISH_COMPANY_BACKUP_KEY)
+    reset({
+      company_name: (data.company_name as string) || '',
+      address: (data.address as string) || '',
+      phone: (data.phone as string) || '',
+      manager_name: (data.manager_name as string) || '',
+    })
+    toast.success('PDF’den gelen sirket alanlari yuklendi; lutfen kontrol edin.')
+  }, [reset])
 
   const checkNameDuplicate = useCallback(async (name: string) => {
     if (!name || name.length < 3 || !user) { setNameDuplicate(null); return }

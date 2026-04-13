@@ -52,6 +52,9 @@ export default function NewFormPage() {
   const [loadingData, setLoadingData] = useState(true)
   const [createdToken, setCreatedToken] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [customerQuery, setCustomerQuery] = useState('')
+  const [chineseCompanyQuery, setChineseCompanyQuery] = useState('')
+  const [turkishCompanyQuery, setTurkishCompanyQuery] = useState('')
   
   const { user } = useAuth()
   const router = useRouter()
@@ -66,6 +69,16 @@ export default function NewFormPage() {
 
   const beenToChina = watch('been_to_china')
   const fingerprintGiven = watch('fingerprint_given')
+
+  const filteredCustomers = customers.filter((c) =>
+    `${c.full_name} ${c.tc_number}`.toLowerCase().includes(customerQuery.toLowerCase())
+  )
+  const filteredChineseCompanies = chineseCompanies.filter((c) =>
+    `${c.company_name} ${c.city}`.toLowerCase().includes(chineseCompanyQuery.toLowerCase())
+  )
+  const filteredTurkishCompanies = turkishCompanies.filter((c) =>
+    `${c.company_name} ${c.address}`.toLowerCase().includes(turkishCompanyQuery.toLowerCase())
+  )
 
   const handleSavedTravelSelect = (travelName: string) => {
     if (!travelName) return
@@ -221,26 +234,59 @@ export default function NewFormPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
                 <label className="form-label">Musteri Sec *</label>
+                <input
+                  type="text"
+                  className="input-field mb-2"
+                  placeholder="Musteri ara (isim/TC)"
+                  value={customerQuery}
+                  onChange={(e) => setCustomerQuery(e.target.value)}
+                  disabled={customers.length === 0}
+                />
                 <select {...register('customer_id', { required: 'Musteri secimi gerekli' })} className="input-field" disabled={customers.length === 0}>
                   <option value="">Musteri Secin</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.full_name} ({c.tc_number})</option>)}
+                  {filteredCustomers.map(c => <option key={c.id} value={c.id}>{c.full_name} ({c.tc_number})</option>)}
                 </select>
+                {customers.length > 0 && filteredCustomers.length === 0 && (
+                  <p className="text-xs text-slate-500 mt-1">Aramaya uygun musteri bulunamadi.</p>
+                )}
                 {errors.customer_id && <p className="text-rose-400 text-xs mt-1.5">{errors.customer_id.message}</p>}
               </div>
               <div>
                 <label className="form-label">Cinli Sirket Sec *</label>
+                <input
+                  type="text"
+                  className="input-field mb-2"
+                  placeholder="Cinli sirket ara (isim/sehir)"
+                  value={chineseCompanyQuery}
+                  onChange={(e) => setChineseCompanyQuery(e.target.value)}
+                  disabled={chineseCompanies.length === 0}
+                />
                 <select {...register('chinese_company_id', { required: 'Cinli sirket secimi gerekli' })} className="input-field" disabled={chineseCompanies.length === 0}>
                   <option value="">Cinli Sirket Secin</option>
-                  {chineseCompanies.map(c => <option key={c.id} value={c.id}>{c.company_name} ({c.city})</option>)}
+                  {filteredChineseCompanies.map(c => <option key={c.id} value={c.id}>{c.company_name} ({c.city})</option>)}
                 </select>
+                {chineseCompanies.length > 0 && filteredChineseCompanies.length === 0 && (
+                  <p className="text-xs text-slate-500 mt-1">Aramaya uygun Cinli sirket bulunamadi.</p>
+                )}
                 {errors.chinese_company_id && <p className="text-rose-400 text-xs mt-1.5">{errors.chinese_company_id.message}</p>}
               </div>
               <div>
                 <label className="form-label">Turk Sirket Sec *</label>
+                <input
+                  type="text"
+                  className="input-field mb-2"
+                  placeholder="Turk sirket ara (isim/adres)"
+                  value={turkishCompanyQuery}
+                  onChange={(e) => setTurkishCompanyQuery(e.target.value)}
+                  disabled={turkishCompanies.length === 0}
+                />
                 <select {...register('turkish_company_id', { required: 'Turk sirket secimi gerekli' })} className="input-field" disabled={turkishCompanies.length === 0}>
                   <option value="">Turk Sirket Secin</option>
-                  {turkishCompanies.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+                  {filteredTurkishCompanies.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
                 </select>
+                {turkishCompanies.length > 0 && filteredTurkishCompanies.length === 0 && (
+                  <p className="text-xs text-slate-500 mt-1">Aramaya uygun Turk sirket bulunamadi.</p>
+                )}
                 {errors.turkish_company_id && <p className="text-rose-400 text-xs mt-1.5">{errors.turkish_company_id.message}</p>}
               </div>
             </div>

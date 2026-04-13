@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { createBrowserClient } from '@supabase/ssr'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -15,17 +15,20 @@ interface LoginForm {
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
-  const supabase = createBrowserClient(
+  const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  ), [])
 
-  if (user) {
-    router.push('/dashboard')
-    return null
-  }
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.push('/dashboard')
+    }
+  }, [authLoading, user, router])
+
+  if (authLoading || user) return null
 
   const onSubmit = async (data: LoginForm) => {
     setLoading(true)

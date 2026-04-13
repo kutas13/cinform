@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
@@ -8,6 +8,7 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { VISA_PDF_CUSTOMER_BACKUP_KEY, VISA_PDF_CUSTOMER_KEY } from '@/lib/visa-pdf-import-storage'
 
 interface CustomerForm {
   full_name: string
@@ -44,6 +45,8 @@ interface CustomerForm {
 export default function NewCustomerPage() {
   const [loading, setLoading] = useState(false)
   const [tcDuplicate, setTcDuplicate] = useState<{ full_name: string; tc_number: string } | null>(null)
+  const [importedChildren, setImportedChildren] = useState<Array<Record<string, unknown>>>([])
+  const importedChildrenAppliedRef = useRef(false)
   const { user } = useAuth()
   const router = useRouter()
   const supabase = createBrowserClient(
@@ -54,13 +57,97 @@ export default function NewCustomerPage() {
   const {
     register,
     handleSubmit,
+    reset,
+    setValue,
     watch,
     formState: { errors },
-  } = useForm<CustomerForm>()
+  } = useForm<CustomerForm>({
+    defaultValues: {
+      work_start_year: 2024,
+      work_start_month: 1,
+      work_end_year: 2024,
+      work_end_month: 2,
+    },
+  })
+
+  const normalizeAiText = (value: unknown): string => {
+    if (typeof value !== 'string') return ''
+    return value.replace(/\s+/g, ' ').trim()
+  }
+
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const raw =
+      sessionStorage.getItem(VISA_PDF_CUSTOMER_KEY) || localStorage.getItem(VISA_PDF_CUSTOMER_BACKUP_KEY)
+    if (!raw) return
+    let data: Record<string, unknown>
+    try {
+      data = JSON.parse(raw)
+    } catch {
+      sessionStorage.removeItem(VISA_PDF_CUSTOMER_KEY)
+      localStorage.removeItem(VISA_PDF_CUSTOMER_BACKUP_KEY)
+      return
+    }
+    sessionStorage.removeItem(VISA_PDF_CUSTOMER_KEY)
+    localStorage.removeItem(VISA_PDF_CUSTOMER_BACKUP_KEY)
+
+    const childrenData = Array.isArray(data.children_data)
+      ? (data.children_data as Array<Record<string, unknown>>)
+      : []
+
+    setImportedChildren(childrenData)
+    importedChildrenAppliedRef.current = false
+
+    reset({
+      full_name: (data.full_name as string) || '',
+      birth_year: typeof data.birth_year === 'number' ? data.birth_year : (undefined as unknown as number),
+      birth_city: (data.birth_city as string) || '',
+      birth_province: (data.birth_province as string) || '',
+      tc_number: (data.tc_number as string) || '',
+      marital_status: (data.marital_status as CustomerForm['marital_status']) || ('' as CustomerForm['marital_status']),
+      passport_issue_place: (data.passport_issue_place as string) || '',
+      home_address: (data.home_address as string) || '',
+      phone_number: (data.phone_number as string) || '',
+      email: (data.email as string) || '',
+      occupation_type:
+        (data.occupation_type as CustomerForm['occupation_type']) || ('' as CustomerForm['occupation_type']),
+      work_start_year: typeof data.work_start_year === 'number' ? data.work_start_year : (undefined as unknown as number),
+      work_start_month:
+        typeof data.work_start_month === 'number' ? data.work_start_month : (undefined as unknown as number),
+      work_end_year: typeof data.work_end_year === 'number' ? data.work_end_year : undefined,
+      work_end_month: typeof data.work_end_month === 'number' ? data.work_end_month : undefined,
+      father_first_name: (data.father_first_name as string) || '',
+      father_last_name: (data.father_last_name as string) || '',
+      father_nationality: (data.father_nationality as string) || 'Türkiye',
+      father_birth_date: (data.father_birth_date as string) || '',
+      mother_first_name: (data.mother_first_name as string) || '',
+      mother_last_name: (data.mother_last_name as string) || '',
+      mother_nationality: (data.mother_nationality as string) || 'Türkiye',
+      mother_birth_date: (data.mother_birth_date as string) || '',
+      children_count: typeof data.children_count === 'number' ? data.children_count : childrenData.length,
+    } as CustomerForm)
+    toast.success('PDF’den gelen musteri alanlari yuklendi; lutfen kontrol edin.')
+  }, [reset])
 
   const maritalStatus = watch('marital_status')
   const rawChildrenCount = watch('children_count')
   const childrenCount = Number(rawChildrenCount) || 0
+
+  useEffect(() => {
+    if (!importedChildren.length) return
+    if (childrenCount <= 0) return
+    if (importedChildrenAppliedRef.current) return
+    if (childrenCount < importedChildren.length) return
+
+    importedChildren.forEach((child, i) => {
+      setValue(`children_${i}_first_name` as any, normalizeAiText((child.first_name as string) || ''))
+      setValue(`children_${i}_last_name` as any, normalizeAiText((child.last_name as string) || ''))
+      setValue(`children_${i}_birth_date` as any, (child.birth_date as string) || '')
+    })
+
+    importedChildrenAppliedRef.current = true
+  }, [importedChildren, childrenCount, setValue])
 
   const checkTcDuplicate = useCallback(async (tc: string) => {
     if (!tc || tc.length !== 11 || !user) { setTcDuplicate(null); return }
@@ -78,27 +165,28 @@ export default function NewCustomerPage() {
 
     setLoading(true)
     try {
+      const n = (v: unknown) => normalizeAiText(v)
       const cleanedData: Record<string, any> = {
-        full_name: data.full_name,
+        full_name: n(data.full_name),
         birth_year: data.birth_year,
-        birth_city: data.birth_city,
-        birth_province: data.birth_province,
+        birth_city: n(data.birth_city),
+        birth_province: n(data.birth_province),
         tc_number: data.tc_number,
         marital_status: data.marital_status,
-        passport_issue_place: data.passport_issue_place,
-        home_address: data.home_address,
+        passport_issue_place: n(data.passport_issue_place),
+        home_address: n(data.home_address),
         phone_number: data.phone_number,
         email: data.email,
-        father_first_name: data.father_first_name,
-        father_last_name: data.father_last_name,
+        father_first_name: n(data.father_first_name),
+        father_last_name: n(data.father_last_name),
         father_nationality: data.father_nationality || 'Türkiye',
-        mother_first_name: data.mother_first_name,
-        mother_last_name: data.mother_last_name,
+        mother_first_name: n(data.mother_first_name),
+        mother_last_name: n(data.mother_last_name),
         mother_nationality: data.mother_nationality || 'Türkiye',
         children_count: data.children_count || 0,
         children_data: Array.from({ length: data.children_count || 0 }, (_, i) => ({
-          first_name: (data as any)[`children_${i}_first_name`] || '',
-          last_name: (data as any)[`children_${i}_last_name`] || '',
+          first_name: n((data as any)[`children_${i}_first_name`] || ''),
+          last_name: n((data as any)[`children_${i}_last_name`] || ''),
           nationality: (data as any)[`children_${i}_nationality`] || 'Türkiye',
           birth_date: (data as any)[`children_${i}_birth_date`] || '',
         })),
@@ -118,13 +206,13 @@ export default function NewCustomerPage() {
       }
 
       if (data.marital_status === 'Married') {
-        if (data.spouse_first_name) cleanedData.spouse_first_name = data.spouse_first_name
-        if (data.spouse_last_name) cleanedData.spouse_last_name = data.spouse_last_name
+        if (data.spouse_first_name) cleanedData.spouse_first_name = n(data.spouse_first_name)
+        if (data.spouse_last_name) cleanedData.spouse_last_name = n(data.spouse_last_name)
         if (data.spouse_birth_date && data.spouse_birth_date !== '') {
           cleanedData.spouse_birth_date = data.spouse_birth_date
         }
         if (data.spouse_birth_country) cleanedData.spouse_birth_country = data.spouse_birth_country
-        if (data.spouse_birth_city) cleanedData.spouse_birth_city = data.spouse_birth_city
+        if (data.spouse_birth_city) cleanedData.spouse_birth_city = n(data.spouse_birth_city)
       }
 
       const { error } = await supabase.from('customers').insert(cleanedData)
@@ -266,32 +354,17 @@ export default function NewCustomerPage() {
                 <option value="employee">Calisan (Manager)</option>
               </select>
               {errors.occupation_type && <p className="text-rose-400 text-xs mt-1.5">{errors.occupation_type.message}</p>}
-              <p className="text-xs text-slate-600 mt-2">Owner secilirse: Businessperson / Calisan secilirse: Company employee</p>
+              <p className="text-xs text-slate-600 mt-2">
+                Owner secilirse: Businessperson / Calisan secilirse: Company employee
+              </p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <div>
-                <label className="form-label">Giris Yili *</label>
-                <input {...register('work_start_year', { required: 'Gerekli', valueAsNumber: true })} type="number" className="input-field" placeholder="2020" min={1970} max={2030} />
-              </div>
-              <div>
-                <label className="form-label">Giris Ayi *</label>
-                <select {...register('work_start_month', { required: 'Gerekli', valueAsNumber: true })} className="input-field">
-                  <option value="">Ay</option>
-                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="form-label">Cikis Yili</label>
-                <input {...register('work_end_year', { valueAsNumber: true })} type="number" className="input-field" placeholder="Bos birakin" min={1970} max={2030} />
-              </div>
-              <div>
-                <label className="form-label">Cikis Ayi</label>
-                <select {...register('work_end_month', { valueAsNumber: true })} className="input-field">
-                  <option value="">Bos</option>
-                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
-            </div>
+            <input type="hidden" {...register('work_start_year', { valueAsNumber: true })} />
+            <input type="hidden" {...register('work_start_month', { valueAsNumber: true })} />
+            <input type="hidden" {...register('work_end_year', { valueAsNumber: true })} />
+            <input type="hidden" {...register('work_end_month', { valueAsNumber: true })} />
+            <p className="text-xs text-slate-500 mt-3">
+              Is giris/cikis sabit: Giris 2024-01, Cikis 2024-02.
+            </p>
           </div>
 
           {/* 6. Iletisim */}
