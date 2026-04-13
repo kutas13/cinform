@@ -10,6 +10,7 @@ import {
   PlusIcon,
   ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline'
+import VisaPdfImportCard from '@/components/dashboard/VisaPdfImportCard'
 
 interface DashboardStats {
   customers: number
@@ -70,6 +71,8 @@ export default function DashboardClient({ stats, user }: DashboardClientProps) {
 
   return (
     <div className="p-6 lg:p-10 max-w-7xl mx-auto">
+      <VisaPdfImportCard />
+
       {/* Welcome Header */}
       <div className="mb-10">
         <div className="flex items-center gap-3 mb-2">

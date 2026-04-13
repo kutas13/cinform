@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
@@ -8,6 +8,10 @@ import { useAuth } from '@/components/providers/AuthProvider'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import {
+  VISA_PDF_CUSTOMER_BACKUP_KEY,
+  VISA_PDF_CUSTOMER_KEY,
+} from '@/lib/visa-pdf-import-storage'
 
 interface CustomerForm {
   full_name: string
@@ -55,6 +59,7 @@ export default function NewCustomerPage() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<CustomerForm>({
     defaultValues: {
@@ -74,6 +79,62 @@ export default function NewCustomerPage() {
   const maritalStatus = watch('marital_status')
   const rawChildrenCount = watch('children_count')
   const childrenCount = Number(rawChildrenCount) || 0
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const sessionPayload = sessionStorage.getItem(VISA_PDF_CUSTOMER_KEY)
+    const backupPayload = localStorage.getItem(VISA_PDF_CUSTOMER_BACKUP_KEY)
+    const raw = sessionPayload || backupPayload
+    if (!raw) return
+
+    try {
+      const parsed = JSON.parse(raw) as Record<string, any>
+      const setIfPresent = (field: keyof CustomerForm, value: unknown) => {
+        if (value === undefined || value === null || value === '') return
+        setValue(field, value as any, { shouldDirty: true })
+      }
+
+      setIfPresent('full_name', parsed.full_name)
+      setIfPresent('birth_year', parsed.birth_year)
+      setIfPresent('birth_city', parsed.birth_city)
+      setIfPresent('birth_province', parsed.birth_province)
+      setIfPresent('tc_number', parsed.tc_number)
+      setIfPresent('marital_status', parsed.marital_status)
+      setIfPresent('passport_issue_place', parsed.passport_issue_place)
+      setIfPresent('home_address', parsed.home_address)
+      setIfPresent('phone_number', parsed.phone_number)
+      setIfPresent('email', parsed.email)
+      setIfPresent('occupation_type', parsed.occupation_type)
+      setIfPresent('work_start_year', parsed.work_start_year)
+      setIfPresent('work_start_month', parsed.work_start_month)
+      setIfPresent('work_end_year', parsed.work_end_year)
+      setIfPresent('work_end_month', parsed.work_end_month)
+      setIfPresent('father_first_name', parsed.father_first_name)
+      setIfPresent('father_last_name', parsed.father_last_name)
+      setIfPresent('father_nationality', parsed.father_nationality)
+      setIfPresent('father_birth_date', parsed.father_birth_date)
+      setIfPresent('mother_first_name', parsed.mother_first_name)
+      setIfPresent('mother_last_name', parsed.mother_last_name)
+      setIfPresent('mother_nationality', parsed.mother_nationality)
+      setIfPresent('mother_birth_date', parsed.mother_birth_date)
+      setIfPresent('children_count', parsed.children_count ?? 0)
+
+      if (Array.isArray(parsed.children_data)) {
+        parsed.children_data.forEach((child, index) => {
+          if (!child) return
+          setValue(`children_${index}_first_name` as any, child.first_name || '', { shouldDirty: true })
+          setValue(`children_${index}_last_name` as any, child.last_name || '', { shouldDirty: true })
+          setValue(`children_${index}_nationality` as any, child.nationality || 'Türkiye', { shouldDirty: true })
+          setValue(`children_${index}_birth_date` as any, child.birth_date || '', { shouldDirty: true })
+        })
+      }
+    } catch {
+      // ignore malformed storage payload
+    } finally {
+      sessionStorage.removeItem(VISA_PDF_CUSTOMER_KEY)
+      localStorage.removeItem(VISA_PDF_CUSTOMER_BACKUP_KEY)
+    }
+  }, [setValue])
 
   const checkTcDuplicate = useCallback(async (tc: string) => {
     if (!tc || tc.length !== 11 || !user) { setTcDuplicate(null); return }
