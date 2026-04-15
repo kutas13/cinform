@@ -24,6 +24,11 @@ export type PdfImportCustomer = {
   mother_last_name: string
   mother_nationality: string
   mother_birth_date: string
+  spouse_first_name?: string
+  spouse_last_name?: string
+  spouse_birth_date?: string
+  spouse_birth_country?: string
+  spouse_birth_city?: string
   children_count: number
   children_data?: Array<{
     first_name: string
@@ -313,6 +318,34 @@ function parseEmail(text: string): string | null {
   if (m0) return m0[1]
   const m = text.match(/E-mail address[：:\s]*\n?\s*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i)
   return m ? m[1] : null
+}
+
+function parseSpouse(text: string): {
+  first_name: string
+  last_name: string
+  birth_date: string | null
+  birth_country: string | null
+  birth_city: string | null
+} | null {
+  const block = text.match(/5\.5A[^\n]*(?:Spouse|配偶)([\s\S]*?)(?=5\.5B|5\.5C|Father|父亲)/i)
+  if (!block) return null
+  const sub = block[1]
+  const nm =
+    sub.match(/Name\s+([A-Z][A-Z\s]{2,80}?)\s+(?:Nationality|国籍)/i) ||
+    sub.match(/Name\s+([A-Z][A-Z\s]{2,80}?)\s+(?:Date of birth|Occupation)/i)
+  if (!nm) return null
+  const { first, last } = splitPersonName(nm[1])
+  if (!first || !last) return null
+  const birth = sub.match(/Date of birth[^\d]*(\d{4}-\d{2}-\d{2})/i)
+  const country = sub.match(/Country of\s*birth\s+([A-Za-zığüşöçİĞÜŞÖÇ\s]{2,40})/i)
+  const city = sub.match(/City of birth\s+([A-Za-zığüşöçİĞÜŞÖÇ\s]{2,40})/i)
+  return {
+    first_name: first,
+    last_name: last,
+    birth_date: birth ? birth[1] : null,
+    birth_country: country ? normalizeSpaces(country[1]) : null,
+    birth_city: city ? normalizeSpaces(city[1]) : null,
+  }
 }
 
 function parseFather(text: string): { nameLine: string; birth: string | null } | null {
@@ -717,6 +750,7 @@ export function parseChinaVisaPdfText(raw: string): ChinaVisaPdfParseResult {
   const phone_number = parsePhone(text) || parsePhone(noisyNormalizedText) || ''
   const email = parseEmail(text) || parseEmail(noisyNormalizedText) || ''
 
+  const spouseP = parseSpouse(text) || parseSpouse(noisyNormalizedText)
   const fatherP = parseFather(text) || parseFather(noisyNormalizedText)
   const motherP = parseMother(text) || parseMother(noisyNormalizedText)
   const children = parseChildren(text).length ? parseChildren(text) : parseChildren(noisyNormalizedText)
@@ -764,6 +798,11 @@ export function parseChinaVisaPdfText(raw: string): ChinaVisaPdfParseResult {
     mother_last_name: mSplit.last,
     mother_nationality: 'Türkiye',
     mother_birth_date: motherP?.birth || '',
+    spouse_first_name: spouseP?.first_name,
+    spouse_last_name: spouseP?.last_name,
+    spouse_birth_date: spouseP?.birth_date || undefined,
+    spouse_birth_country: spouseP?.birth_country || undefined,
+    spouse_birth_city: spouseP?.birth_city || undefined,
     children_count: children.length,
     children_data: children,
   }

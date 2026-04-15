@@ -117,6 +117,11 @@ export default function NewCustomerPage() {
       setIfPresent('mother_last_name', parsed.mother_last_name)
       setIfPresent('mother_nationality', parsed.mother_nationality)
       setIfPresent('mother_birth_date', parsed.mother_birth_date)
+      setIfPresent('spouse_first_name', parsed.spouse_first_name)
+      setIfPresent('spouse_last_name', parsed.spouse_last_name)
+      setIfPresent('spouse_birth_date', parsed.spouse_birth_date)
+      setIfPresent('spouse_birth_country', parsed.spouse_birth_country)
+      setIfPresent('spouse_birth_city', parsed.spouse_birth_city)
       setIfPresent('children_count', parsed.children_count ?? 0)
 
       if (Array.isArray(parsed.children_data)) {

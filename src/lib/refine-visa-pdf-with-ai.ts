@@ -82,6 +82,11 @@ Return ONLY a JSON object with this shape:
     "mother_last_name": "string",
     "mother_nationality": "string",
     "mother_birth_date": "yyyy-mm-dd",
+    "spouse_first_name": "string",
+    "spouse_last_name": "string",
+    "spouse_birth_date": "yyyy-mm-dd",
+    "spouse_birth_country": "string",
+    "spouse_birth_city": "string",
     "children_count": number,
     "children_data": [{"first_name":"string","last_name":"string","nationality":"string","birth_date":"yyyy-mm-dd"}]
   },
@@ -95,9 +100,14 @@ Return ONLY a JSON object with this shape:
 }
 
 Rules:
-- Parse directly from PDF text.
-- Fix OCR splits like "T urk iye" or "Please specify" noise.
-- If spouse data exists, marital_status should be Married.
+- Parse directly from PDF text. Extract ALL fields accurately.
+- Fix OCR splits like "T urk iye", "BO ZACI" -> "BOZACI", "O MER" -> "OMER".
+- Section 5.5A contains Spouse data. Extract name, birth date, birth country, birth city.
+- If spouse data exists, marital_status MUST be "Married".
+- Section 5.5B=Father, 5.5C=Mother, 5.5D=Children.
+- Section 3.2 has work experience with Turkish company info.
+- birth_province and birth_city come from section 1.4B and 1.4C, NOT "Please specify".
+- passport_issue_place comes from section 1.7D.
 - Keep output concise and valid JSON only.`
 
   const res = await fetch('https://api.openai.com/v1/responses', {
@@ -188,6 +198,16 @@ Rules:
     if (motherNationality) merged.customer.mother_nationality = motherNationality
     const motherBirthDate = pickString(c.mother_birth_date)
     if (motherBirthDate) merged.customer.mother_birth_date = motherBirthDate
+    const spouseFirstName = pickString(c.spouse_first_name)
+    if (spouseFirstName) merged.customer.spouse_first_name = spouseFirstName
+    const spouseLastName = pickString(c.spouse_last_name)
+    if (spouseLastName) merged.customer.spouse_last_name = spouseLastName
+    const spouseBirthDate = pickString(c.spouse_birth_date)
+    if (spouseBirthDate) merged.customer.spouse_birth_date = spouseBirthDate
+    const spouseBirthCountry = pickString(c.spouse_birth_country)
+    if (spouseBirthCountry) merged.customer.spouse_birth_country = spouseBirthCountry
+    const spouseBirthCity = pickString(c.spouse_birth_city)
+    if (spouseBirthCity) merged.customer.spouse_birth_city = spouseBirthCity
 
     const childrenCount = pickNumber(c.children_count)
     if (childrenCount !== undefined) merged.customer.children_count = childrenCount
