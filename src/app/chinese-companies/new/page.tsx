@@ -15,7 +15,6 @@ interface ChineseCompanyForm {
   city: string
   district: string
   phone: string
-  inviter_position: string
   email: string
   relationship_type: string
 }
@@ -49,7 +48,13 @@ export default function NewChineseCompanyPage() {
     if (!user) { toast.error('Giris yapmaniz gerekiyor'); return }
     setLoading(true)
     try {
-      const { error } = await supabase.from('chinese_companies').insert({ ...data, created_by: user.id })
+      const payload = {
+        ...data,
+        inviter_name: '-',
+        inviter_position: '-',
+        created_by: user.id,
+      }
+      const { error } = await supabase.from('chinese_companies').insert(payload)
       if (error) throw error
       toast.success('Cinli sirket basariyla olusturuldu!')
       router.push('/chinese-companies')
@@ -144,22 +149,7 @@ export default function NewChineseCompanyPage() {
             </div>
           </div>
 
-          {/* Davet Eden */}
-          <div className="form-section bg-emerald-500/5 border-emerald-500/20">
-            <h3 className="text-base font-bold text-emerald-400 mb-6">Davet Eden Kisi Bilgileri</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="form-label">Davet Eden Pozisyonu *</label>
-                <input {...register('inviter_position', { required: 'Pozisyon gereklidir' })} type="text" className="input-field" placeholder="Orn: General Manager" />
-                {errors.inviter_position && <p className="text-rose-400 text-xs mt-1.5">{errors.inviter_position.message}</p>}
-              </div>
-              <div>
-                <label className="form-label">Iliski Turu *</label>
-                <input {...register('relationship_type', { required: 'Iliski turu gereklidir' })} type="text" className="input-field bg-slate-800/50" defaultValue="Business partnership" readOnly />
-                <p className="text-xs text-slate-600 mt-1">6.2B icin otomatik "Business partnership" secilecek</p>
-              </div>
-            </div>
-          </div>
+          <input type="hidden" {...register('relationship_type')} defaultValue="Business partnership" />
 
           {/* Submit */}
           <div className="flex justify-end gap-4 pt-6 border-t border-slate-700/50">
