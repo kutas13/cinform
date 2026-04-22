@@ -16,8 +16,6 @@ import {
 interface TurkishCompanyForm {
   company_name: string
   address: string
-  phone: string
-  manager_name: string
 }
 
 export default function NewTurkishCompanyPage() {
@@ -43,8 +41,6 @@ export default function NewTurkishCompanyPage() {
       const parsed = JSON.parse(raw) as Partial<TurkishCompanyForm>
       if (parsed.company_name) setValue('company_name', parsed.company_name, { shouldDirty: true })
       if (parsed.address) setValue('address', parsed.address, { shouldDirty: true })
-      if (parsed.phone) setValue('phone', parsed.phone, { shouldDirty: true })
-      if (parsed.manager_name) setValue('manager_name', parsed.manager_name, { shouldDirty: true })
     } catch {
       // ignore malformed storage payload
     } finally {
@@ -122,28 +118,14 @@ export default function NewTurkishCompanyPage() {
                   </div>
                 )}
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className="form-label">Sirket Adresi *</label>
                 <textarea {...register('address', { required: 'Adres gereklidir' })} rows={3} className="input-field" placeholder="Tam sirket adresi" />
                 {errors.address && <p className="text-rose-400 text-xs mt-1.5">{errors.address.message}</p>}
               </div>
-              <div>
-                <label className="form-label">Telefon Numarasi *</label>
-                <input {...register('phone', { required: 'Telefon gereklidir' })} type="tel" className="input-field" placeholder="+90 212 123 45 67" />
-                {errors.phone && <p className="text-rose-400 text-xs mt-1.5">{errors.phone.message}</p>}
-                <p className="text-xs text-slate-600 mt-1">Bu numara hem sirket hem mudur icin kullanilacak</p>
-              </div>
             </div>
-          </div>
-
-          {/* Mudur */}
-          <div className="form-section bg-violet-500/5 border-violet-500/20">
-            <h3 className="text-base font-bold text-violet-400 mb-6">Mudur/Yonetici Bilgileri</h3>
-            <div>
-              <label className="form-label">Mudur/Yonetici Ismi *</label>
-              <input {...register('manager_name', { required: 'Mudur ismi gereklidir' })} type="text" className="input-field" placeholder="Orn: Ahmet Yilmaz" />
-              {errors.manager_name && <p className="text-rose-400 text-xs mt-1.5">{errors.manager_name.message}</p>}
-              <p className="text-xs text-slate-600 mt-1">Supervisor/yonetici olarak kaydedilecek</p>
+            <div className="mt-4 p-3 bg-rose-500/10 rounded-xl border border-rose-500/20">
+              <p className="text-xs text-rose-300">Telefon ve Mudur/Yonetici bilgileri musteriden otomatik alinir</p>
             </div>
           </div>
 

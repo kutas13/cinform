@@ -21,7 +21,6 @@ interface CustomerForm {
   tc_number: string
   marital_status: 'Single' | 'Married' | 'Divorced' | 'Widowed' | 'Other'
   passport_issue_place: string
-  home_address: string
   phone_number: string
   email: string
   occupation_type: 'owner' | 'employee'
@@ -45,9 +44,23 @@ interface CustomerForm {
   children_count: number
 }
 
+function generateAddress(index: number): string {
+  const DAIRES_PER_NO = 15
+  const MAX_NO = 140
+  const PER_STREET = DAIRES_PER_NO * MAX_NO
+  const streets = ['MENEKSELER SOKAK', 'FIDAN SOKAK']
+  const streetIndex = Math.floor(index / PER_STREET)
+  const street = streets[streetIndex % streets.length]
+  const inStreet = index % PER_STREET
+  const no = Math.floor(inStreet / DAIRES_PER_NO) + 1
+  const daire = (inStreet % DAIRES_PER_NO) + 1
+  return `YARIMBURGAZ MAH ${street} NO ${no} DAIRE ${daire}`
+}
+
 export default function NewCustomerPage() {
   const [loading, setLoading] = useState(false)
   const [tcDuplicate, setTcDuplicate] = useState<{ full_name: string; tc_number: string } | null>(null)
+  const [generatedAddress, setGeneratedAddress] = useState<string>('')
   const { user } = useAuth()
   const router = useRouter()
   const supabase = createBrowserClient(
@@ -69,6 +82,18 @@ export default function NewCustomerPage() {
       work_end_month: 2,
     },
   })
+
+  useEffect(() => {
+    if (!user) return
+    async function fetchAddressIndex() {
+      const { count } = await supabase
+        .from('customers')
+        .select('id', { count: 'exact', head: true })
+        .eq('created_by', user!.id)
+      setGeneratedAddress(generateAddress(count || 0))
+    }
+    fetchAddressIndex()
+  }, [user, supabase])
 
   const normalizeAiText = (value: unknown): string => {
     if (typeof value !== 'string') return ''
@@ -101,7 +126,6 @@ export default function NewCustomerPage() {
       setIfPresent('tc_number', parsed.tc_number)
       setIfPresent('marital_status', parsed.marital_status)
       setIfPresent('passport_issue_place', parsed.passport_issue_place)
-      setIfPresent('home_address', parsed.home_address)
       setIfPresent('phone_number', parsed.phone_number)
       setIfPresent('email', parsed.email)
       setIfPresent('occupation_type', parsed.occupation_type)
@@ -166,7 +190,7 @@ export default function NewCustomerPage() {
         tc_number: data.tc_number,
         marital_status: data.marital_status,
         passport_issue_place: n(data.passport_issue_place),
-        home_address: n(data.home_address),
+        home_address: generatedAddress,
         phone_number: data.phone_number,
         email: data.email,
         father_first_name: n(data.father_first_name),
@@ -364,9 +388,11 @@ export default function NewCustomerPage() {
             <h3 className="text-base font-bold text-cyan-400 mb-6">Iletisim ve Adres Bilgileri</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="md:col-span-2">
-                <label className="form-label">Ev Adresi *</label>
-                <textarea {...register('home_address', { required: 'Ev adresi gereklidir' })} rows={3} className="input-field" placeholder="Tam ev adresiniz" />
-                {errors.home_address && <p className="text-rose-400 text-xs mt-1.5">{errors.home_address.message}</p>}
+                <label className="form-label">Ev Adresi (Otomatik)</label>
+                <div className="input-field bg-slate-800/50 text-slate-300 cursor-not-allowed min-h-[44px] flex items-center">
+                  {generatedAddress || 'Hesaplaniyor...'}
+                </div>
+                <p className="text-xs text-slate-600 mt-1">Adres otomatik uretilir (Yarimburgaz Mah, Menekseler Sok / Fidan Sok)</p>
               </div>
               <div>
                 <label className="form-label">Telefon Numarasi *</label>

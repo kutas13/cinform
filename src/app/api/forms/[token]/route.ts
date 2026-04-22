@@ -126,13 +126,13 @@ export async function GET(
       turkish_company: {
         company_name: turkish_company.company_name || '',
         address: turkish_company.address || '',
-        phone: turkish_company.phone || '',
+        phone: customer.phone_number || turkish_company.phone || '',
         occupation_type: turkish_company.occupation_type || '',
         work_start_year: turkish_company.work_start_year || 2020,
         work_start_month: turkish_company.work_start_month || 1,
         work_end_year: turkish_company.work_end_year || null,
         work_end_month: turkish_company.work_end_month || null,
-        manager_name: turkish_company.manager_name || '',
+        manager_name: customer.full_name || turkish_company.manager_name || '',
         position_duty: turkish_company.position_duty || '',
       },
 

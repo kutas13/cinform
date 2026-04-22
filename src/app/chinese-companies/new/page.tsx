@@ -15,7 +15,6 @@ interface ChineseCompanyForm {
   city: string
   district: string
   phone: string
-  inviter_name: string
   inviter_position: string
   email: string
   relationship_type: string
@@ -150,16 +149,11 @@ export default function NewChineseCompanyPage() {
             <h3 className="text-base font-bold text-emerald-400 mb-6">Davet Eden Kisi Bilgileri</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="form-label">Davet Eden Adi *</label>
-                <input {...register('inviter_name', { required: 'Davet eden adi gereklidir' })} type="text" className="input-field" placeholder="Orn: Li Wei" />
-                {errors.inviter_name && <p className="text-rose-400 text-xs mt-1.5">{errors.inviter_name.message}</p>}
-              </div>
-              <div>
                 <label className="form-label">Davet Eden Pozisyonu *</label>
                 <input {...register('inviter_position', { required: 'Pozisyon gereklidir' })} type="text" className="input-field" placeholder="Orn: General Manager" />
                 {errors.inviter_position && <p className="text-rose-400 text-xs mt-1.5">{errors.inviter_position.message}</p>}
               </div>
-              <div className="md:col-span-2">
+              <div>
                 <label className="form-label">Iliski Turu *</label>
                 <input {...register('relationship_type', { required: 'Iliski turu gereklidir' })} type="text" className="input-field bg-slate-800/50" defaultValue="Business partnership" readOnly />
                 <p className="text-xs text-slate-600 mt-1">6.2B icin otomatik "Business partnership" secilecek</p>
