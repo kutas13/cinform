@@ -64,7 +64,13 @@ export default function NewTurkishCompanyPage() {
     if (!user) { toast.error('Giris yapmaniz gerekiyor'); return }
     setLoading(true)
     try {
-      const { error } = await supabase.from('turkish_companies').insert({ ...data, created_by: user.id })
+      const payload = {
+        ...data,
+        phone: '-',
+        manager_name: '-',
+        created_by: user.id,
+      }
+      const { error } = await supabase.from('turkish_companies').insert(payload)
       if (error) throw error
       toast.success('Turk sirket basariyla olusturuldu!')
       router.push('/turkish-companies')

@@ -80,6 +80,7 @@ export default function NewCustomerPage() {
       work_start_month: 1,
       work_end_year: 2024,
       work_end_month: 2,
+      occupation_type: 'owner',
     },
   })
 
@@ -359,29 +360,11 @@ export default function NewCustomerPage() {
             </div>
           </div>
 
-          {/* 5. Calisma Durumu */}
-          <div className="form-section bg-rose-500/5 border-rose-500/20">
-            <h3 className="text-base font-bold text-rose-400 mb-6">Calisma Durumu</h3>
-            <div>
-              <label className="form-label">Pozisyon *</label>
-              <select {...register('occupation_type', { required: 'Pozisyon secimi gereklidir' })} className="input-field">
-                <option value="">Seciniz</option>
-                <option value="owner">Sirket Sahibi (Owner)</option>
-                <option value="employee">Calisan (Manager)</option>
-              </select>
-              {errors.occupation_type && <p className="text-rose-400 text-xs mt-1.5">{errors.occupation_type.message}</p>}
-              <p className="text-xs text-slate-600 mt-2">
-                Owner secilirse: Businessperson / Calisan secilirse: Company employee
-              </p>
-            </div>
-            <input type="hidden" {...register('work_start_year', { valueAsNumber: true })} />
-            <input type="hidden" {...register('work_start_month', { valueAsNumber: true })} />
-            <input type="hidden" {...register('work_end_year', { valueAsNumber: true })} />
-            <input type="hidden" {...register('work_end_month', { valueAsNumber: true })} />
-            <p className="text-xs text-slate-500 mt-3">
-              Is giris/cikis sabit: Giris 2024-01, Cikis 2024-02.
-            </p>
-          </div>
+          <input type="hidden" {...register('occupation_type')} />
+          <input type="hidden" {...register('work_start_year', { valueAsNumber: true })} />
+          <input type="hidden" {...register('work_start_month', { valueAsNumber: true })} />
+          <input type="hidden" {...register('work_end_year', { valueAsNumber: true })} />
+          <input type="hidden" {...register('work_end_month', { valueAsNumber: true })} />
 
           {/* 6. Iletisim */}
           <div className="form-section bg-cyan-500/5 border-cyan-500/20">
