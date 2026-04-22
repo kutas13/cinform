@@ -385,15 +385,8 @@ export default function NewCustomerPage() {
 
           {/* 6. Iletisim */}
           <div className="form-section bg-cyan-500/5 border-cyan-500/20">
-            <h3 className="text-base font-bold text-cyan-400 mb-6">Iletisim ve Adres Bilgileri</h3>
+            <h3 className="text-base font-bold text-cyan-400 mb-6">Iletisim Bilgileri</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="md:col-span-2">
-                <label className="form-label">Ev Adresi (Otomatik)</label>
-                <div className="input-field bg-slate-800/50 text-slate-300 cursor-not-allowed min-h-[44px] flex items-center">
-                  {generatedAddress || 'Hesaplaniyor...'}
-                </div>
-                <p className="text-xs text-slate-600 mt-1">Adres otomatik uretilir (Yarimburgaz Mah, Menekseler Sok / Fidan Sok)</p>
-              </div>
               <div>
                 <label className="form-label">Telefon Numarasi *</label>
                 <input {...register('phone_number', { required: 'Telefon gereklidir' })} type="tel" className="input-field" placeholder="+90 532 123 45 67" />

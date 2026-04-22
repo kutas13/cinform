@@ -124,9 +124,6 @@ export default function NewTurkishCompanyPage() {
                 {errors.address && <p className="text-rose-400 text-xs mt-1.5">{errors.address.message}</p>}
               </div>
             </div>
-            <div className="mt-4 p-3 bg-rose-500/10 rounded-xl border border-rose-500/20">
-              <p className="text-xs text-rose-300">Telefon ve Mudur/Yonetici bilgileri musteriden otomatik alinir</p>
-            </div>
           </div>
 
           {/* Submit */}
