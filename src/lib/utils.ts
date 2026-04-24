@@ -1,14 +1,50 @@
 import { clsx, type ClassValue } from 'clsx'
 import { nanoid } from 'nanoid'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs)
 }
 
 /**
- * Generate a secure access token for forms
+ * Sıralı form access token üretir (fv_0001, fv_0002, ...).
+ * Supabase tarafındaki `next_form_token()` RPC'sini çağırır (atomik ve güvenli).
+ * RPC başarısız olursa istemci tarafında max+1 yaklaşımıyla fallback uygular.
  */
-export function generateAccessToken(): string {
+export async function generateAccessToken(
+  supabase: SupabaseClient
+): Promise<string> {
+  try {
+    const { data, error } = await supabase.rpc('next_form_token')
+    if (!error && typeof data === 'string' && /^fv_\d+$/.test(data)) {
+      return data
+    }
+  } catch {
+    // sessiz düş, fallback'e geç
+  }
+
+  const { data: rows } = await supabase
+    .from('forms')
+    .select('access_token')
+
+  let maxNum = 0
+  for (const row of rows || []) {
+    const m = (row as { access_token?: string | null }).access_token?.match(
+      /^fv_(\d+)$/
+    )
+    if (m) {
+      const n = parseInt(m[1], 10)
+      if (n > maxNum) maxNum = n
+    }
+  }
+  return `fv_${String(maxNum + 1).padStart(4, '0')}`
+}
+
+/**
+ * Acil durum fallback'i (DB erişilemiyorsa).
+ * Normal akışta kullanılmaz; `generateAccessToken` tercih edin.
+ */
+export function generateRandomAccessToken(): string {
   const timestamp = Date.now()
   const randomId = nanoid(32)
   return `fv_${randomId}_${timestamp}`

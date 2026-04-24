@@ -129,7 +129,7 @@ export default function NewFormPage() {
 
     setLoading(true)
     try {
-      const accessToken = generateAccessToken()
+      const accessToken = await generateAccessToken(supabase)
       const insertData: Record<string, any> = {
         customer_id: data.customer_id, chinese_company_id: data.chinese_company_id,
         turkish_company_id: data.turkish_company_id, travel_name: data.travel_name || null,
