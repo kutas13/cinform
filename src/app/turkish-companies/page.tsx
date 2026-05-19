@@ -38,10 +38,7 @@ export default function TurkishCompaniesPage() {
 
   async function load() {
     const { data, error } = await supabase.from('turkish_companies')
-      .select(
-        'id, company_name, address, phone, manager_name, created_at, ' +
-        'stamped_paper_file_path, stamped_paper_file_name'
-      )
+      .select('*')
       .eq('created_by', user!.id).order('created_at', { ascending: false })
     if (error) { toast.error('Yuklenemedi'); console.error(error) }
     else setCompanies(((data as unknown) as TurkishCompany[]) || [])
@@ -55,14 +52,21 @@ export default function TurkishCompaniesPage() {
     else { toast.success('Silindi'); load() }
   }
 
-  async function downloadStampedPaper(path: string | null) {
+  async function downloadStampedPaper(path: string | null, fileName?: string | null) {
     if (!path) return
     try {
       const { data, error } = await supabase.storage
         .from(DOC_BUCKET)
-        .createSignedUrl(path, 60)
-      if (error || !data?.signedUrl) throw error || new Error('URL alınamadı')
-      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+        .download(path)
+      if (error || !data) throw error || new Error('Dosya indirilemedi')
+      const url = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName || 'kaseli-kagit'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
     } catch (e: any) {
       toast.error('Kaşeli kağıt indirilemedi: ' + (e.message || ''))
     }
@@ -138,7 +142,7 @@ export default function TurkishCompaniesPage() {
                     <td className="px-6 py-4">
                       <button
                         type="button"
-                        onClick={() => downloadStampedPaper(c.stamped_paper_file_path)}
+                        onClick={() => downloadStampedPaper(c.stamped_paper_file_path, c.stamped_paper_file_name)}
                         disabled={!c.stamped_paper_file_path}
                         title={c.stamped_paper_file_path ? `Kaşeli Kağıt: ${c.stamped_paper_file_name || ''}` : 'Kaşeli kağıt yok'}
                         className={`p-1.5 rounded-md border transition-all ${

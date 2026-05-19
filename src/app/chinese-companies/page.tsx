@@ -45,12 +45,7 @@ export default function ChineseCompaniesPage() {
 
   async function load() {
     const { data, error } = await supabase.from('chinese_companies')
-      .select(
-        'id, company_name, city, phone, email, inviter_name, created_at, ' +
-        'invitation_file_path, invitation_file_name, ' +
-        'business_license_file_path, business_license_file_name, ' +
-        'id_card_file_path, id_card_file_name'
-      )
+      .select('*')
       .eq('created_by', user!.id).order('created_at', { ascending: false })
     if (error) { toast.error('Yuklenemedi'); console.error(error) }
     else setCompanies(((data as unknown) as ChineseCompany[]) || [])
@@ -64,14 +59,21 @@ export default function ChineseCompaniesPage() {
     else { toast.success('Silindi'); load() }
   }
 
-  async function downloadDoc(path: string | null, label: string) {
+  async function downloadDoc(path: string | null, label: string, fileName?: string | null) {
     if (!path) return
     try {
       const { data, error } = await supabase.storage
         .from(DOC_BUCKET)
-        .createSignedUrl(path, 60)
-      if (error || !data?.signedUrl) throw error || new Error('URL alınamadı')
-      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+        .download(path)
+      if (error || !data) throw error || new Error('Dosya indirilemedi')
+      const url = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName || label
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
     } catch (e: any) {
       toast.error(`${label} indirilemedi: ${e.message || ''}`)
     }
@@ -155,7 +157,7 @@ export default function ChineseCompaniesPage() {
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => downloadDoc(c.invitation_file_path, 'Davetiye')}
+                          onClick={() => downloadDoc(c.invitation_file_path, 'Davetiye', c.invitation_file_name)}
                           disabled={!c.invitation_file_path}
                           title={c.invitation_file_path ? `Davetiye: ${c.invitation_file_name || ''}` : 'Davetiye yok'}
                           className={`p-1.5 rounded-md border transition-all ${
@@ -168,7 +170,7 @@ export default function ChineseCompaniesPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => downloadDoc(c.business_license_file_path, 'Faaliyet')}
+                          onClick={() => downloadDoc(c.business_license_file_path, 'Faaliyet', c.business_license_file_name)}
                           disabled={!c.business_license_file_path}
                           title={c.business_license_file_path ? `Faaliyet: ${c.business_license_file_name || ''}` : 'Faaliyet belgesi yok'}
                           className={`p-1.5 rounded-md border transition-all ${
@@ -181,7 +183,7 @@ export default function ChineseCompaniesPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => downloadDoc(c.id_card_file_path, 'ID Kart')}
+                          onClick={() => downloadDoc(c.id_card_file_path, 'ID Kart', c.id_card_file_name)}
                           disabled={!c.id_card_file_path}
                           title={c.id_card_file_path ? `ID Kart: ${c.id_card_file_name || ''}` : 'ID kart yok'}
                           className={`p-1.5 rounded-md border transition-all ${

@@ -114,9 +114,16 @@ export default function CompanyDocumentSlot({
     try {
       const { data, error } = await supabase.storage
         .from(BUCKET)
-        .createSignedUrl(currentPath, 60)
-      if (error || !data?.signedUrl) throw error || new Error('URL alınamadı')
-      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+        .download(currentPath)
+      if (error || !data) throw error || new Error('Dosya indirilemedi')
+      const url = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = currentName || 'dosya'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
     } catch (e: any) {
       console.error(e)
       toast.error('İndirme hatası: ' + (e.message || ''))

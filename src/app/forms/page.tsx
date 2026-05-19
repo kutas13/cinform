@@ -38,26 +38,43 @@ export default function FormsPage() {
   }, [user])
 
   async function loadForms() {
-    // Tek sorguda foreign key'leri birlikte cek (N+1 yerine 1 query).
-    const { data, error } = await supabase
+    const { data: formsData, error: formsError } = await supabase
       .from('forms')
-      .select(`
-        id, access_token, travel_name, visa_type,
-        travel_start_date, travel_end_date, entries_type, created_at,
-        customer:customers(full_name),
-        chinese_company:chinese_companies(company_name),
-        turkish_company:turkish_companies(company_name)
-      `)
+      .select('id, access_token, travel_name, visa_type, travel_start_date, travel_end_date, entries_type, created_at, customer_id, chinese_company_id, turkish_company_id')
       .order('created_at', { ascending: false })
 
-    if (error) {
-      toast.error('Yuklenemedi')
-      console.error(error)
-      setLoading(false)
-      return
-    }
+    if (formsError) { toast.error('Yuklenemedi'); console.error(formsError); setLoading(false); return }
+    if (!formsData || formsData.length === 0) { setForms([]); setLoading(false); return }
 
-    setForms((data as unknown as FormItem[]) || [])
+    const custIds = Array.from(new Set(formsData.map(f => f.customer_id)))
+    const chinIds = Array.from(new Set(formsData.map(f => f.chinese_company_id)))
+    const turkIds = Array.from(new Set(formsData.map(f => f.turkish_company_id)))
+
+    const [custRes, chinRes, turkRes] = await Promise.all([
+      supabase.from('customers').select('id, full_name').in('id', custIds),
+      supabase.from('chinese_companies').select('id, company_name').in('id', chinIds),
+      supabase.from('turkish_companies').select('id, company_name').in('id', turkIds),
+    ])
+
+    const custMap = new Map((custRes.data || []).map(c => [c.id, c.full_name]))
+    const chinMap = new Map((chinRes.data || []).map(c => [c.id, c.company_name]))
+    const turkMap = new Map((turkRes.data || []).map(c => [c.id, c.company_name]))
+
+    const enriched: FormItem[] = formsData.map(f => ({
+      id: f.id,
+      access_token: f.access_token,
+      travel_name: f.travel_name,
+      visa_type: f.visa_type,
+      travel_start_date: f.travel_start_date,
+      travel_end_date: f.travel_end_date,
+      entries_type: f.entries_type,
+      created_at: f.created_at,
+      customer: custMap.has(f.customer_id) ? { full_name: custMap.get(f.customer_id)! } : null,
+      chinese_company: chinMap.has(f.chinese_company_id) ? { company_name: chinMap.get(f.chinese_company_id)! } : null,
+      turkish_company: turkMap.has(f.turkish_company_id) ? { company_name: turkMap.get(f.turkish_company_id)! } : null,
+    }))
+
+    setForms(enriched)
     setLoading(false)
   }
 
