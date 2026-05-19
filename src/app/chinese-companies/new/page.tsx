@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { useAuth } from '@/components/providers/AuthProvider'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
-import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, ExclamationTriangleIcon, PaperClipIcon } from '@heroicons/react/24/outline'
+import CompanyDocumentSlot from '@/components/forms/CompanyDocumentSlot'
 
 interface ChineseCompanyForm {
   company_name: string
@@ -19,6 +20,11 @@ interface ChineseCompanyForm {
   relationship_type: string
 }
 
+interface DocState {
+  path: string | null
+  name: string | null
+}
+
 export default function NewChineseCompanyPage() {
   const [loading, setLoading] = useState(false)
   const [nameDuplicate, setNameDuplicate] = useState<{ company_name: string; city: string } | null>(null)
@@ -28,6 +34,19 @@ export default function NewChineseCompanyPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
+
+  // Önceden bir UUID üretiyoruz; dosyalar bu klasöre yüklensin, sonra şirketi bu ID ile kaydedeceğiz.
+  const draftCompanyId = useMemo(
+    () =>
+      (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`),
+    []
+  )
+
+  const [invitation, setInvitation] = useState<DocState>({ path: null, name: null })
+  const [businessLicense, setBusinessLicense] = useState<DocState>({ path: null, name: null })
+  const [idCard, setIdCard] = useState<DocState>({ path: null, name: null })
 
   const { register, handleSubmit, formState: { errors } } = useForm<ChineseCompanyForm>({
     defaultValues: { relationship_type: 'Business partnership' }
@@ -49,10 +68,17 @@ export default function NewChineseCompanyPage() {
     setLoading(true)
     try {
       const payload = {
+        id: draftCompanyId,
         ...data,
         inviter_name: '-',
         inviter_position: '-',
         created_by: user.id,
+        invitation_file_path: invitation.path,
+        invitation_file_name: invitation.name,
+        business_license_file_path: businessLicense.path,
+        business_license_file_name: businessLicense.name,
+        id_card_file_path: idCard.path,
+        id_card_file_name: idCard.name,
       }
       const { error } = await supabase.from('chinese_companies').insert(payload)
       if (error) throw error
@@ -150,6 +176,66 @@ export default function NewChineseCompanyPage() {
           </div>
 
           <input type="hidden" {...register('relationship_type')} defaultValue="Business partnership" />
+
+          {/* Belgeler */}
+          <div className="form-section bg-emerald-500/5 border-emerald-500/20">
+            <div className="mb-5 flex items-center gap-2">
+              <PaperClipIcon className="h-5 w-5 text-emerald-400" />
+              <h3 className="text-base font-bold text-emerald-400">Belgeler (Opsiyonel)</h3>
+            </div>
+            <p className="mb-5 text-xs text-slate-500">
+              PDF veya görsel (JPG, PNG, WEBP) — en fazla 10MB. Aynı şirketten tekrar davet
+              geldiğinde belgeleri buradan indirebilirsin.
+            </p>
+            {user ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <CompanyDocumentSlot
+                  label="Davetiye"
+                  description="Çinli şirket davet mektubu"
+                  table="chinese_companies"
+                  pathColumn="invitation_file_path"
+                  nameColumn="invitation_file_name"
+                  companyId={draftCompanyId}
+                  userId={user.id}
+                  supabase={supabase}
+                  currentPath={invitation.path}
+                  currentName={invitation.name}
+                  mode="new"
+                  onChange={(path, name) => setInvitation({ path, name })}
+                />
+                <CompanyDocumentSlot
+                  label="Faaliyet Belgesi"
+                  description="İş ruhsatı / faaliyet belgesi"
+                  table="chinese_companies"
+                  pathColumn="business_license_file_path"
+                  nameColumn="business_license_file_name"
+                  companyId={draftCompanyId}
+                  userId={user.id}
+                  supabase={supabase}
+                  currentPath={businessLicense.path}
+                  currentName={businessLicense.name}
+                  mode="new"
+                  onChange={(path, name) => setBusinessLicense({ path, name })}
+                />
+                <CompanyDocumentSlot
+                  label="ID Kart"
+                  description="Davet edenin kimlik kartı"
+                  table="chinese_companies"
+                  pathColumn="id_card_file_path"
+                  nameColumn="id_card_file_name"
+                  companyId={draftCompanyId}
+                  userId={user.id}
+                  supabase={supabase}
+                  currentPath={idCard.path}
+                  currentName={idCard.name}
+                  mode="new"
+                  onChange={(path, name) => setIdCard({ path, name })}
+                />
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">Oturum doğrulanıyor...</p>
+            )}
+          </div>
 
           {/* Submit */}
           <div className="flex justify-end gap-4 pt-6 border-t border-slate-700/50">

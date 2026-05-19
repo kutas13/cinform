@@ -38,21 +38,26 @@ export default function FormsPage() {
   }, [user])
 
   async function loadForms() {
-    const { data: formsData, error: formsError } = await supabase
-      .from('forms').select('*').order('created_at', { ascending: false })
+    // Tek sorguda foreign key'leri birlikte cek (N+1 yerine 1 query).
+    const { data, error } = await supabase
+      .from('forms')
+      .select(`
+        id, access_token, travel_name, visa_type,
+        travel_start_date, travel_end_date, entries_type, created_at,
+        customer:customers(full_name),
+        chinese_company:chinese_companies(company_name),
+        turkish_company:turkish_companies(company_name)
+      `)
+      .order('created_at', { ascending: false })
 
-    if (formsError) { toast.error('Yuklenemedi'); console.error(formsError); setLoading(false); return }
+    if (error) {
+      toast.error('Yuklenemedi')
+      console.error(error)
+      setLoading(false)
+      return
+    }
 
-    const enriched = await Promise.all((formsData || []).map(async (form: any) => {
-      const [custRes, chinRes, turkRes] = await Promise.all([
-        supabase.from('customers').select('full_name').eq('id', form.customer_id).single(),
-        supabase.from('chinese_companies').select('company_name').eq('id', form.chinese_company_id).single(),
-        supabase.from('turkish_companies').select('company_name').eq('id', form.turkish_company_id).single(),
-      ])
-      return { ...form, customer: custRes.data, chinese_company: chinRes.data, turkish_company: turkRes.data }
-    }))
-
-    setForms(enriched)
+    setForms((data as unknown as FormItem[]) || [])
     setLoading(false)
   }
 

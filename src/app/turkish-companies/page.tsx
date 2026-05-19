@@ -5,7 +5,16 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useAuth } from '@/components/providers/AuthProvider'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { PlusIcon, TrashIcon, PencilIcon, MagnifyingGlassIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline'
+import {
+  PlusIcon,
+  TrashIcon,
+  PencilIcon,
+  MagnifyingGlassIcon,
+  BuildingLibraryIcon,
+  DocumentTextIcon,
+} from '@heroicons/react/24/outline'
+
+const DOC_BUCKET = 'company-documents'
 
 interface TurkishCompany {
   id: string
@@ -14,6 +23,8 @@ interface TurkishCompany {
   phone: string
   manager_name: string
   created_at: string
+  stamped_paper_file_path: string | null
+  stamped_paper_file_name: string | null
 }
 
 export default function TurkishCompaniesPage() {
@@ -27,10 +38,13 @@ export default function TurkishCompaniesPage() {
 
   async function load() {
     const { data, error } = await supabase.from('turkish_companies')
-      .select('id, company_name, address, phone, manager_name, created_at')
+      .select(
+        'id, company_name, address, phone, manager_name, created_at, ' +
+        'stamped_paper_file_path, stamped_paper_file_name'
+      )
       .eq('created_by', user!.id).order('created_at', { ascending: false })
     if (error) { toast.error('Yuklenemedi'); console.error(error) }
-    else setCompanies(data || [])
+    else setCompanies(((data as unknown) as TurkishCompany[]) || [])
     setLoading(false)
   }
 
@@ -39,6 +53,19 @@ export default function TurkishCompaniesPage() {
     const { error } = await supabase.from('turkish_companies').delete().eq('id', id)
     if (error) toast.error('Silinemedi')
     else { toast.success('Silindi'); load() }
+  }
+
+  async function downloadStampedPaper(path: string | null) {
+    if (!path) return
+    try {
+      const { data, error } = await supabase.storage
+        .from(DOC_BUCKET)
+        .createSignedUrl(path, 60)
+      if (error || !data?.signedUrl) throw error || new Error('URL alınamadı')
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+    } catch (e: any) {
+      toast.error('Kaşeli kağıt indirilemedi: ' + (e.message || ''))
+    }
   }
 
   const filtered = companies.filter(c => c.company_name.toLowerCase().includes(search.toLowerCase()))
@@ -90,6 +117,7 @@ export default function TurkishCompaniesPage() {
               <thead>
                 <tr className="border-b border-slate-700/50">
                   <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sirket Adi</th>
+                  <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Belge</th>
                   <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden md:table-cell">Mudur</th>
                   <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden lg:table-cell">Telefon</th>
                   <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden lg:table-cell">Tarih</th>
@@ -106,6 +134,21 @@ export default function TurkishCompaniesPage() {
                         </div>
                         <span className="text-sm font-medium text-white">{c.company_name}</span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        type="button"
+                        onClick={() => downloadStampedPaper(c.stamped_paper_file_path)}
+                        disabled={!c.stamped_paper_file_path}
+                        title={c.stamped_paper_file_path ? `Kaşeli Kağıt: ${c.stamped_paper_file_name || ''}` : 'Kaşeli kağıt yok'}
+                        className={`p-1.5 rounded-md border transition-all ${
+                          c.stamped_paper_file_path
+                            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 cursor-pointer'
+                            : 'border-slate-700/40 bg-slate-800/30 text-slate-600 cursor-not-allowed'
+                        }`}
+                      >
+                        <DocumentTextIcon className="h-3.5 w-3.5" />
+                      </button>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-400 hidden md:table-cell">{c.manager_name}</td>
                     <td className="px-6 py-4 text-sm text-slate-400 font-mono hidden lg:table-cell">{c.phone}</td>

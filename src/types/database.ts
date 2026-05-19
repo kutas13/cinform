@@ -36,6 +36,12 @@ export type Database = {
           contact_info: string
           email: string
           relationship_type: string
+          invitation_file_path: string | null
+          invitation_file_name: string | null
+          business_license_file_path: string | null
+          business_license_file_name: string | null
+          id_card_file_path: string | null
+          id_card_file_name: string | null
           created_by: string
           created_at: string
         }
@@ -50,6 +56,12 @@ export type Database = {
           contact_info: string
           email: string
           relationship_type?: string
+          invitation_file_path?: string | null
+          invitation_file_name?: string | null
+          business_license_file_path?: string | null
+          business_license_file_name?: string | null
+          id_card_file_path?: string | null
+          id_card_file_name?: string | null
           created_by: string
           created_at?: string
         }
@@ -64,6 +76,12 @@ export type Database = {
           contact_info?: string
           email?: string
           relationship_type?: string
+          invitation_file_path?: string | null
+          invitation_file_name?: string | null
+          business_license_file_path?: string | null
+          business_license_file_name?: string | null
+          id_card_file_path?: string | null
+          id_card_file_name?: string | null
           created_by?: string
           created_at?: string
         }
@@ -81,6 +99,8 @@ export type Database = {
           work_end_month: number | null
           manager_name: string
           position_duty: string
+          stamped_paper_file_path: string | null
+          stamped_paper_file_name: string | null
           created_by: string
           created_at: string
         }
@@ -96,6 +116,8 @@ export type Database = {
           work_end_month?: number | null
           manager_name: string
           position_duty: string
+          stamped_paper_file_path?: string | null
+          stamped_paper_file_name?: string | null
           created_by: string
           created_at?: string
         }
@@ -111,6 +133,8 @@ export type Database = {
           work_end_month?: number | null
           manager_name?: string
           position_duty?: string
+          stamped_paper_file_path?: string | null
+          stamped_paper_file_name?: string | null
           created_by?: string
           created_at?: string
         }

@@ -1,31 +1,43 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { useAuth } from '@/components/providers/AuthProvider'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
-import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, ExclamationTriangleIcon, PaperClipIcon } from '@heroicons/react/24/outline'
 import {
   VISA_PDF_TURKISH_COMPANY_BACKUP_KEY,
   VISA_PDF_TURKISH_COMPANY_KEY,
 } from '@/lib/visa-pdf-import-storage'
+import CompanyDocumentSlot from '@/components/forms/CompanyDocumentSlot'
 
 interface TurkishCompanyForm {
   company_name: string
   address: string
 }
 
+interface DocState { path: string | null; name: string | null }
+
 export default function NewTurkishCompanyPage() {
   const [loading, setLoading] = useState(false)
   const [nameDuplicate, setNameDuplicate] = useState<{ company_name: string } | null>(null)
+  const [stampedPaper, setStampedPaper] = useState<DocState>({ path: null, name: null })
   const { user } = useAuth()
   const router = useRouter()
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const draftCompanyId = useMemo(
+    () =>
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    []
   )
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<TurkishCompanyForm>()
@@ -65,10 +77,13 @@ export default function NewTurkishCompanyPage() {
     setLoading(true)
     try {
       const payload = {
+        id: draftCompanyId,
         ...data,
         phone: '-',
         manager_name: '-',
         created_by: user.id,
+        stamped_paper_file_path: stampedPaper.path,
+        stamped_paper_file_name: stampedPaper.name,
       }
       const { error } = await supabase.from('turkish_companies').insert(payload)
       if (error) throw error
@@ -130,6 +145,38 @@ export default function NewTurkishCompanyPage() {
                 {errors.address && <p className="text-rose-400 text-xs mt-1.5">{errors.address.message}</p>}
               </div>
             </div>
+          </div>
+
+          {/* Belgeler */}
+          <div className="form-section bg-emerald-500/5 border-emerald-500/20">
+            <div className="mb-5 flex items-center gap-2">
+              <PaperClipIcon className="h-5 w-5 text-emerald-400" />
+              <h3 className="text-base font-bold text-emerald-400">Belge (Opsiyonel)</h3>
+            </div>
+            <p className="mb-5 text-xs text-slate-500">
+              PDF veya görsel (JPG, PNG, WEBP) — en fazla 10MB. Sonradan tekrar
+              kullanabilmek için kaşeli kağıdı buraya ekle.
+            </p>
+            {user ? (
+              <div className="grid grid-cols-1 gap-4 md:max-w-md">
+                <CompanyDocumentSlot
+                  label="Kaşeli Kağıt"
+                  description="Şirket kaşeli antetli kağıt"
+                  table="turkish_companies"
+                  pathColumn="stamped_paper_file_path"
+                  nameColumn="stamped_paper_file_name"
+                  companyId={draftCompanyId}
+                  userId={user.id}
+                  supabase={supabase}
+                  currentPath={stampedPaper.path}
+                  currentName={stampedPaper.name}
+                  mode="new"
+                  onChange={(path, name) => setStampedPaper({ path, name })}
+                />
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">Oturum doğrulanıyor...</p>
+            )}
           </div>
 
           {/* Submit */}

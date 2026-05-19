@@ -7,7 +7,10 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useAuth } from '@/components/providers/AuthProvider'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
-import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, ExclamationTriangleIcon, PaperClipIcon } from '@heroicons/react/24/outline'
+import CompanyDocumentSlot from '@/components/forms/CompanyDocumentSlot'
+
+interface DocState { path: string | null; name: string | null }
 
 const cities = ['GuangDong','BeiJing','ShangHai','ZheJiang','JiangSu','ShanDong','FuJian','SiChuan','HuBei','HuNan','HeNan','HeBei','ChongQing','TianJin','ShaanXi','ShanXi','LiaoNing','JiLin','HeiLongJiang','AnHui','JiangXi','GuangXi','HaiNan','GuiZhou','YunNan','NingXia','GanSu','QingHai','XinJiang','NeiMengGu','XiZang','HongKong','MaCao','TaiWan']
 
@@ -28,6 +31,9 @@ export default function EditChineseCompanyPage() {
   const [pageLoading, setPageLoading] = useState(true)
   const [nameDuplicate, setNameDuplicate] = useState<{ company_name: string; city: string } | null>(null)
   const [originalName, setOriginalName] = useState('')
+  const [invitation, setInvitation] = useState<DocState>({ path: null, name: null })
+  const [businessLicense, setBusinessLicense] = useState<DocState>({ path: null, name: null })
+  const [idCard, setIdCard] = useState<DocState>({ path: null, name: null })
   const { user } = useAuth()
   const router = useRouter()
   const { id } = useParams()
@@ -52,6 +58,9 @@ export default function EditChineseCompanyPage() {
     const { data, error } = await supabase.from('chinese_companies').select('*').eq('id', id as string).eq('created_by', user!.id).single()
     if (error || !data) { toast.error('Sirket bulunamadi'); router.push('/chinese-companies'); return }
     setOriginalName(data.company_name || '')
+    setInvitation({ path: data.invitation_file_path || null, name: data.invitation_file_name || null })
+    setBusinessLicense({ path: data.business_license_file_path || null, name: data.business_license_file_name || null })
+    setIdCard({ path: data.id_card_file_path || null, name: data.id_card_file_name || null })
     reset(data)
     setPageLoading(false)
   }
@@ -153,6 +162,64 @@ export default function EditChineseCompanyPage() {
                 <input {...register('inviter_position', { required: true })} className="input-field" />
               </div>
             </div>
+          </div>
+
+          {/* Belgeler */}
+          <div className="form-section bg-emerald-500/5 border-emerald-500/20">
+            <div className="mb-5 flex items-center gap-2">
+              <PaperClipIcon className="h-5 w-5 text-emerald-400" />
+              <h3 className="text-base font-bold text-emerald-400">Belgeler</h3>
+            </div>
+            <p className="mb-5 text-xs text-slate-500">
+              PDF veya görsel (JPG, PNG, WEBP) — en fazla 10MB. Aynı şirketten tekrar
+              davet geldiğinde belgeleri buradan indirebilirsin.
+            </p>
+            {user && (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <CompanyDocumentSlot
+                  label="Davetiye"
+                  description="Çinli şirket davet mektubu"
+                  table="chinese_companies"
+                  pathColumn="invitation_file_path"
+                  nameColumn="invitation_file_name"
+                  companyId={id as string}
+                  userId={user.id}
+                  supabase={supabase}
+                  currentPath={invitation.path}
+                  currentName={invitation.name}
+                  mode="edit"
+                  onChange={(path, name) => setInvitation({ path, name })}
+                />
+                <CompanyDocumentSlot
+                  label="Faaliyet Belgesi"
+                  description="İş ruhsatı / faaliyet belgesi"
+                  table="chinese_companies"
+                  pathColumn="business_license_file_path"
+                  nameColumn="business_license_file_name"
+                  companyId={id as string}
+                  userId={user.id}
+                  supabase={supabase}
+                  currentPath={businessLicense.path}
+                  currentName={businessLicense.name}
+                  mode="edit"
+                  onChange={(path, name) => setBusinessLicense({ path, name })}
+                />
+                <CompanyDocumentSlot
+                  label="ID Kart"
+                  description="Davet edenin kimlik kartı"
+                  table="chinese_companies"
+                  pathColumn="id_card_file_path"
+                  nameColumn="id_card_file_name"
+                  companyId={id as string}
+                  userId={user.id}
+                  supabase={supabase}
+                  currentPath={idCard.path}
+                  currentName={idCard.name}
+                  mode="edit"
+                  onChange={(path, name) => setIdCard({ path, name })}
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-4 pt-6 border-t border-slate-700/50">

@@ -7,7 +7,8 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useAuth } from '@/components/providers/AuthProvider'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
-import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, ExclamationTriangleIcon, PaperClipIcon } from '@heroicons/react/24/outline'
+import CompanyDocumentSlot from '@/components/forms/CompanyDocumentSlot'
 
 interface FormData {
   company_name: string
@@ -16,11 +17,14 @@ interface FormData {
   manager_name: string
 }
 
+interface DocState { path: string | null; name: string | null }
+
 export default function EditTurkishCompanyPage() {
   const [loading, setLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
   const [nameDuplicate, setNameDuplicate] = useState<{ company_name: string } | null>(null)
   const [originalName, setOriginalName] = useState('')
+  const [stampedPaper, setStampedPaper] = useState<DocState>({ path: null, name: null })
   const { user } = useAuth()
   const router = useRouter()
   const { id } = useParams()
@@ -45,6 +49,10 @@ export default function EditTurkishCompanyPage() {
     const { data, error } = await supabase.from('turkish_companies').select('*').eq('id', id as string).eq('created_by', user!.id).single()
     if (error || !data) { toast.error('Bulunamadi'); router.push('/turkish-companies'); return }
     setOriginalName(data.company_name || '')
+    setStampedPaper({
+      path: data.stamped_paper_file_path || null,
+      name: data.stamped_paper_file_name || null,
+    })
     reset(data)
     setPageLoading(false)
   }
@@ -119,6 +127,36 @@ export default function EditTurkishCompanyPage() {
               <input {...register('manager_name', { required: true })} className="input-field" />
             </div>
           </div>
+
+          {/* Belge */}
+          <div className="form-section bg-emerald-500/5 border-emerald-500/20">
+            <div className="mb-5 flex items-center gap-2">
+              <PaperClipIcon className="h-5 w-5 text-emerald-400" />
+              <h3 className="text-base font-bold text-emerald-400">Belge</h3>
+            </div>
+            <p className="mb-5 text-xs text-slate-500">
+              PDF veya görsel (JPG, PNG, WEBP) — en fazla 10MB.
+            </p>
+            {user && (
+              <div className="grid grid-cols-1 gap-4 md:max-w-md">
+                <CompanyDocumentSlot
+                  label="Kaşeli Kağıt"
+                  description="Şirket kaşeli antetli kağıt"
+                  table="turkish_companies"
+                  pathColumn="stamped_paper_file_path"
+                  nameColumn="stamped_paper_file_name"
+                  companyId={id as string}
+                  userId={user.id}
+                  supabase={supabase}
+                  currentPath={stampedPaper.path}
+                  currentName={stampedPaper.name}
+                  mode="edit"
+                  onChange={(path, name) => setStampedPaper({ path, name })}
+                />
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end gap-4 pt-6 border-t border-slate-700/50">
             <Link href="/turkish-companies" className="btn-secondary">Iptal</Link>
             <button type="submit" disabled={loading} className="btn-primary disabled:opacity-50">

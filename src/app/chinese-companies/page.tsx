@@ -5,7 +5,18 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useAuth } from '@/components/providers/AuthProvider'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { PlusIcon, TrashIcon, PencilIcon, MagnifyingGlassIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline'
+import {
+  PlusIcon,
+  TrashIcon,
+  PencilIcon,
+  MagnifyingGlassIcon,
+  BuildingOfficeIcon,
+  DocumentTextIcon,
+  IdentificationIcon,
+  EnvelopeOpenIcon,
+} from '@heroicons/react/24/outline'
+
+const DOC_BUCKET = 'company-documents'
 
 interface ChineseCompany {
   id: string
@@ -15,6 +26,12 @@ interface ChineseCompany {
   email: string
   inviter_name: string
   created_at: string
+  invitation_file_path: string | null
+  invitation_file_name: string | null
+  business_license_file_path: string | null
+  business_license_file_name: string | null
+  id_card_file_path: string | null
+  id_card_file_name: string | null
 }
 
 export default function ChineseCompaniesPage() {
@@ -28,10 +45,15 @@ export default function ChineseCompaniesPage() {
 
   async function load() {
     const { data, error } = await supabase.from('chinese_companies')
-      .select('id, company_name, city, phone, email, inviter_name, created_at')
+      .select(
+        'id, company_name, city, phone, email, inviter_name, created_at, ' +
+        'invitation_file_path, invitation_file_name, ' +
+        'business_license_file_path, business_license_file_name, ' +
+        'id_card_file_path, id_card_file_name'
+      )
       .eq('created_by', user!.id).order('created_at', { ascending: false })
     if (error) { toast.error('Yuklenemedi'); console.error(error) }
-    else setCompanies(data || [])
+    else setCompanies(((data as unknown) as ChineseCompany[]) || [])
     setLoading(false)
   }
 
@@ -40,6 +62,19 @@ export default function ChineseCompaniesPage() {
     const { error } = await supabase.from('chinese_companies').delete().eq('id', id)
     if (error) toast.error('Silinemedi')
     else { toast.success('Silindi'); load() }
+  }
+
+  async function downloadDoc(path: string | null, label: string) {
+    if (!path) return
+    try {
+      const { data, error } = await supabase.storage
+        .from(DOC_BUCKET)
+        .createSignedUrl(path, 60)
+      if (error || !data?.signedUrl) throw error || new Error('URL alınamadı')
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+    } catch (e: any) {
+      toast.error(`${label} indirilemedi: ${e.message || ''}`)
+    }
   }
 
   const filtered = companies.filter(c =>
@@ -95,6 +130,7 @@ export default function ChineseCompaniesPage() {
                 <tr className="border-b border-slate-700/50">
                   <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sirket Adi</th>
                   <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sehir</th>
+                  <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Belgeler</th>
                   <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden md:table-cell">Davet Eden</th>
                   <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden lg:table-cell">Telefon</th>
                   <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden lg:table-cell">Tarih</th>
@@ -114,6 +150,49 @@ export default function ChineseCompaniesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-xs px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">{c.city}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => downloadDoc(c.invitation_file_path, 'Davetiye')}
+                          disabled={!c.invitation_file_path}
+                          title={c.invitation_file_path ? `Davetiye: ${c.invitation_file_name || ''}` : 'Davetiye yok'}
+                          className={`p-1.5 rounded-md border transition-all ${
+                            c.invitation_file_path
+                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 cursor-pointer'
+                              : 'border-slate-700/40 bg-slate-800/30 text-slate-600 cursor-not-allowed'
+                          }`}
+                        >
+                          <EnvelopeOpenIcon className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadDoc(c.business_license_file_path, 'Faaliyet')}
+                          disabled={!c.business_license_file_path}
+                          title={c.business_license_file_path ? `Faaliyet: ${c.business_license_file_name || ''}` : 'Faaliyet belgesi yok'}
+                          className={`p-1.5 rounded-md border transition-all ${
+                            c.business_license_file_path
+                              ? 'border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 cursor-pointer'
+                              : 'border-slate-700/40 bg-slate-800/30 text-slate-600 cursor-not-allowed'
+                          }`}
+                        >
+                          <DocumentTextIcon className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadDoc(c.id_card_file_path, 'ID Kart')}
+                          disabled={!c.id_card_file_path}
+                          title={c.id_card_file_path ? `ID Kart: ${c.id_card_file_name || ''}` : 'ID kart yok'}
+                          className={`p-1.5 rounded-md border transition-all ${
+                            c.id_card_file_path
+                              ? 'border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 cursor-pointer'
+                              : 'border-slate-700/40 bg-slate-800/30 text-slate-600 cursor-not-allowed'
+                          }`}
+                        >
+                          <IdentificationIcon className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-400 hidden md:table-cell">{c.inviter_name}</td>
                     <td className="px-6 py-4 text-sm text-slate-400 font-mono hidden lg:table-cell">{c.phone}</td>
