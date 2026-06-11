@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClientClient } from '@/lib/supabase'
@@ -31,6 +31,7 @@ export default function TurkishCompaniesPage() {
   const [companies, setCompanies] = useState<TurkishCompany[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [totalCount, setTotalCount] = useState(0)
   const [notesOpen, setNotesOpen] = useState(false)
   const [notesEntity, setNotesEntity] = useState<{ id: string; name: string } | null>(null)
@@ -41,30 +42,37 @@ export default function TurkishCompaniesPage() {
 
   const currentPage = Number(searchParams.get('page')) || 1
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400)
+    return () => clearTimeout(t)
+  }, [search])
+
   const load = useCallback(async () => {
     if (!user) return
     setLoading(true)
     const from = (currentPage - 1) * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
 
-    const { count } = await supabase
+    let query = supabase
       .from('turkish_companies')
-      .select('*', { count: 'exact', head: true })
+      .select('*', { count: 'exact' })
       .eq('created_by', user.id)
 
-    setTotalCount(count || 0)
+    if (debouncedSearch.trim()) {
+      query = query.or(`company_name.ilike.%${debouncedSearch.trim()}%,manager_name.ilike.%${debouncedSearch.trim()}%`)
+    }
 
-    const { data, error } = await supabase
-      .from('turkish_companies')
-      .select('*')
-      .eq('created_by', user.id)
+    const { data, error, count } = await query
       .order('created_at', { ascending: false })
       .range(from, to)
 
     if (error) { toast.error('Yuklenemedi'); console.error(error) }
-    else setCompanies(((data as unknown) as TurkishCompany[]) || [])
+    else {
+      setCompanies(((data as unknown) as TurkishCompany[]) || [])
+      setTotalCount(count || 0)
+    }
     setLoading(false)
-  }, [user, currentPage])
+  }, [user, currentPage, debouncedSearch])
 
   useEffect(() => { load() }, [load])
 
@@ -104,12 +112,7 @@ export default function TurkishCompaniesPage() {
     router.push(`/turkish-companies?${params.toString()}`)
   }
 
-  const filtered = useMemo(() =>
-    companies.filter(c =>
-      c.company_name.toLowerCase().includes(search.toLowerCase()) ||
-      c.manager_name?.toLowerCase().includes(search.toLowerCase())
-    ), [companies, search])
-
+  const filtered = companies
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
   return (
@@ -123,7 +126,7 @@ export default function TurkishCompaniesPage() {
         createLabel="Yeni Sirket"
         searchPlaceholder="Sirket adi veya mudur ile ara..."
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={(v) => { setSearch(v); if (currentPage !== 1) handlePageChange(1) }}
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={handlePageChange}

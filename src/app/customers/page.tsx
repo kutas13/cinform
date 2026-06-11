@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClientClient } from '@/lib/supabase'
@@ -31,6 +31,7 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [totalCount, setTotalCount] = useState(0)
   const [notesOpen, setNotesOpen] = useState(false)
   const [notesEntity, setNotesEntity] = useState<{ id: string; name: string } | null>(null)
@@ -41,30 +42,37 @@ export default function CustomersPage() {
 
   const currentPage = Number(searchParams.get('page')) || 1
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400)
+    return () => clearTimeout(t)
+  }, [search])
+
   const loadCustomers = useCallback(async () => {
     if (!user) return
     setLoading(true)
     const from = (currentPage - 1) * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
 
-    const { count } = await supabase
+    let query = supabase
       .from('customers')
-      .select('*', { count: 'exact', head: true })
+      .select('id, full_name, tc_number, birth_province, marital_status, occupation_type, created_at', { count: 'exact' })
       .eq('created_by', user.id)
 
-    setTotalCount(count || 0)
+    if (debouncedSearch.trim()) {
+      query = query.or(`full_name.ilike.%${debouncedSearch.trim()}%,tc_number.ilike.%${debouncedSearch.trim()}%`)
+    }
 
-    const { data, error } = await supabase
-      .from('customers')
-      .select('id, full_name, tc_number, birth_province, marital_status, occupation_type, created_at')
-      .eq('created_by', user.id)
+    const { data, error, count } = await query
       .order('created_at', { ascending: false })
       .range(from, to)
 
     if (error) { toast.error('Yuklenemedi'); console.error(error) }
-    else setCustomers((data as Customer[]) || [])
+    else {
+      setCustomers((data as Customer[]) || [])
+      setTotalCount(count || 0)
+    }
     setLoading(false)
-  }, [user, currentPage])
+  }, [user, currentPage, debouncedSearch])
 
   useEffect(() => { loadCustomers() }, [loadCustomers])
 
@@ -86,12 +94,7 @@ export default function CustomersPage() {
     router.push(`/customers?${params.toString()}`)
   }
 
-  const filtered = useMemo(() =>
-    customers.filter(c =>
-      c.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      c.tc_number.includes(search)
-    ), [customers, search])
-
+  const filtered = customers
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
   return (
@@ -105,7 +108,7 @@ export default function CustomersPage() {
         createLabel="Yeni Musteri"
         searchPlaceholder="Ad veya TC ile ara..."
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={(v) => { setSearch(v); if (currentPage !== 1) handlePageChange(1) }}
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={handlePageChange}

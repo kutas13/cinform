@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { createClientClient } from '@/lib/supabase'
@@ -37,6 +37,7 @@ export default function FormsPage() {
   const [forms, setForms] = useState<FormItem[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [totalCount, setTotalCount] = useState(0)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const { user } = useAuth()
@@ -46,23 +47,30 @@ export default function FormsPage() {
 
   const currentPage = Number(searchParams.get('page')) || 1
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400)
+    return () => clearTimeout(t)
+  }, [search])
+
   const loadForms = useCallback(async () => {
     if (!user) return
     setLoading(true)
     const from = (currentPage - 1) * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
 
-    const { count } = await supabase
+    let query = supabase
       .from('forms')
-      .select('*', { count: 'exact', head: true })
+      .select('id, access_token, travel_name, visa_type, travel_start_date, travel_end_date, entries_type, created_at, customer_id, chinese_company_id, turkish_company_id', { count: 'exact' })
 
-    setTotalCount(count || 0)
+    if (debouncedSearch.trim()) {
+      query = query.or(`access_token.ilike.%${debouncedSearch.trim()}%,travel_name.ilike.%${debouncedSearch.trim()}%,visa_type.ilike.%${debouncedSearch.trim()}%`)
+    }
 
-    const { data: formsData, error: formsError } = await supabase
-      .from('forms')
-      .select('id, access_token, travel_name, visa_type, travel_start_date, travel_end_date, entries_type, created_at, customer_id, chinese_company_id, turkish_company_id')
+    const { data: formsData, error: formsError, count } = await query
       .order('created_at', { ascending: false })
       .range(from, to)
+
+    setTotalCount(count || 0)
 
     if (formsError) { toast.error('Yuklenemedi'); console.error(formsError); setLoading(false); return }
     if (!formsData || formsData.length === 0) { setForms([]); setLoading(false); return }
@@ -97,7 +105,7 @@ export default function FormsPage() {
 
     setForms(enriched)
     setLoading(false)
-  }, [user, currentPage])
+  }, [user, currentPage, debouncedSearch])
 
   useEffect(() => { loadForms() }, [loadForms])
 
@@ -123,17 +131,7 @@ export default function FormsPage() {
     router.push(`/forms?${params.toString()}`)
   }
 
-  const filtered = useMemo(() =>
-    forms.filter(f => {
-      const q = search.toLowerCase()
-      return (
-        f.access_token.toLowerCase().includes(q) ||
-        (f.customer?.full_name || '').toLowerCase().includes(q) ||
-        (f.chinese_company?.company_name || '').toLowerCase().includes(q) ||
-        (f.travel_name || '').toLowerCase().includes(q)
-      )
-    }), [forms, search])
-
+  const filtered = forms
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
   return (
@@ -146,7 +144,7 @@ export default function FormsPage() {
       createLabel="Yeni Form"
       searchPlaceholder="Token, musteri veya sirket ile ara..."
       search={search}
-      onSearchChange={setSearch}
+      onSearchChange={(v) => { setSearch(v); if (currentPage !== 1) handlePageChange(1) }}
       currentPage={currentPage}
       totalPages={totalPages}
       onPageChange={handlePageChange}
