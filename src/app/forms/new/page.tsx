@@ -186,7 +186,7 @@ export default function NewFormPage() {
 
         <div className="card p-6 mb-8">
           <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Access Token</h2>
-          <div className="bg-[#060912] rounded-xl p-5 mb-4 border border-slate-700/50">
+          <div className="bg-[#0b0f1a] rounded-xl p-5 mb-4 border border-slate-700/50">
             <code className="text-emerald-400 break-all font-mono text-sm block mb-4">{createdToken}</code>
             <button onClick={handleCopyToken} className="w-full btn-primary py-3.5 text-base flex items-center justify-center gap-2">
               {copied ? <><CheckIcon className="h-5 w-5" /> Kopyalandi!</> : <><ClipboardDocumentIcon className="h-5 w-5" /> Token'i Kopyala</>}

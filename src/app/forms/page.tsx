@@ -212,7 +212,7 @@ export default function FormsPage() {
                   </div>
                 </div>
 
-                <div className="bg-[#060912] rounded-lg p-2.5 border border-slate-700/50 flex items-center justify-between gap-2">
+                <div className="bg-[#0b0f1a] rounded-lg p-2.5 border border-slate-700/50 flex items-center justify-between gap-2">
                   <code className="text-emerald-400 font-mono text-[11px] truncate flex-1">{f.access_token}</code>
                   <button
                     onClick={() => handleCopy(f.access_token, f.id)}

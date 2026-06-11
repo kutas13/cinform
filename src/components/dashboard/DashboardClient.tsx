@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline'
 import VisaPdfImportCard from '@/components/dashboard/VisaPdfImportCard'
 import { createClientClient } from '@/lib/supabase'
+import { ChartBarIcon } from '@heroicons/react/24/outline'
 
 interface DashboardStats {
   customers: number
