@@ -92,13 +92,13 @@ export default function Sidebar() {
     <>
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-[260px] lg:fixed lg:inset-y-0 
-                         bg-[#0b0f1a]/95 backdrop-blur-2xl border-r border-white/[0.06] z-40">
+                         bg-[#0f0f17]/95 backdrop-blur-2xl border-r border-white/[0.06] z-40">
         {sidebarContent}
       </aside>
 
       {/* Mobile topbar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-16 
-                       bg-[#0b0f1a]/95 backdrop-blur-2xl border-b border-white/[0.06] 
+                       bg-[#0f0f17]/95 backdrop-blur-2xl border-b border-white/[0.06] 
                        flex items-center justify-between px-4">
         <Link href="/dashboard" className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center">
@@ -115,7 +115,7 @@ export default function Sidebar() {
       {mobileOpen && (
         <>
           <div className="lg:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-40" onClick={() => setMobileOpen(false)} />
-          <aside className="lg:hidden fixed inset-y-0 left-0 w-[280px] bg-[#0b0f1a] border-r border-white/[0.06] z-50 flex flex-col animate-slide-in-right">
+          <aside className="lg:hidden fixed inset-y-0 left-0 w-[280px] bg-[#0f0f17] border-r border-white/[0.06] z-50 flex flex-col animate-slide-in-right">
             {sidebarContent}
           </aside>
         </>

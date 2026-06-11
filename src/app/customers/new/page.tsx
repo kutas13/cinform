@@ -350,12 +350,12 @@ export default function NewCustomerPage() {
         </div>
 
         {/* 3. Iletisim */}
-        <div className="form-section bg-blue-500/[0.03] border-blue-500/20">
+        <div className="form-section bg-cyan-500/[0.03] border-cyan-500/20">
           <div className="flex items-center gap-2 mb-6">
-            <div className="w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
-              <span className="text-xs font-bold text-blue-400">3</span>
+            <div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+              <span className="text-xs font-bold text-cyan-400">3</span>
             </div>
-            <h3 className="text-sm font-bold text-blue-300 uppercase tracking-wider">Iletisim</h3>
+            <h3 className="text-sm font-bold text-cyan-300 uppercase tracking-wider">Iletisim</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>

@@ -142,7 +142,7 @@ export default function FormDetailPage() {
           <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Access Token</h2>
           <span className="text-xs px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Hazir</span>
         </div>
-        <div className="bg-[#0b0f1a] rounded-xl p-4 border border-slate-700/50 flex items-center justify-between gap-3">
+        <div className="bg-[#0f0f17] rounded-xl p-4 border border-slate-700/50 flex items-center justify-between gap-3">
           <code className="text-emerald-400 break-all font-mono text-sm flex-1">{formData.access_token}</code>
           <button onClick={handleCopyToken} className="shrink-0 btn-primary text-sm py-2 flex items-center gap-1.5">
             {copied ? <><CheckIcon className="h-4 w-4" /> Kopyalandi</> : <><ClipboardDocumentIcon className="h-4 w-4" /> Kopyala</>}
@@ -153,7 +153,7 @@ export default function FormDetailPage() {
       {/* API Info */}
       <div className="card p-6 mb-6">
         <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">API Bilgileri</h2>
-        <div className="bg-[#0b0f1a] rounded-xl p-4 border border-slate-700/50 flex items-center justify-between gap-3">
+        <div className="bg-[#0f0f17] rounded-xl p-4 border border-slate-700/50 flex items-center justify-between gap-3">
           <code className="text-slate-300 break-all font-mono text-xs flex-1">{typeof window !== 'undefined' ? window.location.origin : ''}/api/forms/{formData.access_token}</code>
           <button onClick={handleCopyApiUrl} className="shrink-0 btn-secondary text-sm py-2 flex items-center gap-1.5">
             <ClipboardDocumentIcon className="h-4 w-4" /> Kopyala

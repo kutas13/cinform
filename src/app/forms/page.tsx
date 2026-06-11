@@ -170,8 +170,8 @@ export default function FormsPage() {
           </div>
         ) : view === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map(f => (
-              <div key={f.id} className="card p-5 hover:scale-[1.02] hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-200 group">
+            {filtered.map((f, idx) => (
+              <div key={f.id} className="card p-5 hover:scale-[1.02] hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300 group animate-fade-in-up" style={{ animationDelay: `${idx * 50}ms`, animationFillMode: 'both' }}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center border border-emerald-500/20">
@@ -212,7 +212,7 @@ export default function FormsPage() {
                   </div>
                 </div>
 
-                <div className="bg-[#0b0f1a] rounded-lg p-2.5 border border-slate-700/50 flex items-center justify-between gap-2">
+                <div className="bg-[#0f0f17] rounded-lg p-2.5 border border-slate-700/50 flex items-center justify-between gap-2">
                   <code className="text-emerald-400 font-mono text-[11px] truncate flex-1">{f.access_token}</code>
                   <button
                     onClick={() => handleCopy(f.access_token, f.id)}

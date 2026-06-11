@@ -98,8 +98,8 @@ export default function CustomersPage() {
     <>
       <ListPageShell
         title="Musteriler"
-        icon={<UserGroupIcon className="h-5 w-5 text-blue-400" />}
-        iconBgClass="bg-blue-500/10"
+        icon={<UserGroupIcon className="h-5 w-5 text-violet-400" />}
+        iconBgClass="bg-violet-500/10"
         totalCount={totalCount}
         createHref="/customers/new"
         createLabel="Yeni Musteri"
@@ -129,12 +129,12 @@ export default function CustomersPage() {
             </div>
           ) : view === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map(c => (
-                <div key={c.id} className="card p-5 hover:scale-[1.02] hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-200 group">
+              {filtered.map((c, idx) => (
+                <div key={c.id} className="card p-5 hover:scale-[1.02] hover:shadow-xl hover:shadow-violet-500/10 transition-all duration-300 group animate-fade-in-up" style={{ animationDelay: `${idx * 50}ms`, animationFillMode: 'both' }}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center border border-blue-500/20">
-                        <span className="text-sm font-bold text-blue-400">{c.full_name.charAt(0)}</span>
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center border border-violet-500/20 group-hover:scale-110 transition-transform duration-300">
+                        <span className="text-sm font-bold text-violet-400">{c.full_name.charAt(0)}</span>
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-white">{c.full_name}</p>
@@ -143,7 +143,7 @@ export default function CustomersPage() {
                     </div>
                     <button
                       onClick={() => openNotes(c)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-violet-400 hover:bg-violet-500/10 transition-all"
                       title="Notlar"
                     >
                       <ChatBubbleLeftIcon className="h-4 w-4" />
@@ -156,7 +156,7 @@ export default function CustomersPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] uppercase tracking-wider text-slate-600">Durum</span>
-                      <span className="text-xs px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20">
                         {maritalLabel[c.marital_status] || c.marital_status}
                       </span>
                     </div>
@@ -165,8 +165,8 @@ export default function CustomersPage() {
                     <span className="text-[10px] text-slate-600">
                       {new Date(c.created_at).toLocaleDateString('tr-TR')}
                     </span>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Link href={`/customers/${c.id}/edit`} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
+                      <Link href={`/customers/${c.id}/edit`} className="p-1.5 rounded-lg text-slate-400 hover:text-violet-400 hover:bg-violet-500/10 transition-all">
                         <PencilIcon className="h-3.5 w-3.5" />
                       </Link>
                       <button onClick={() => deleteCustomer(c.id, c.full_name)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
@@ -196,8 +196,8 @@ export default function CustomersPage() {
                       <tr key={c.id} className="border-b border-slate-800/30 hover:bg-white/[0.02] transition-colors group">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center border border-blue-500/20">
-                              <span className="text-xs font-bold text-blue-400">{c.full_name.charAt(0)}</span>
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center border border-violet-500/20">
+                              <span className="text-xs font-bold text-violet-400">{c.full_name.charAt(0)}</span>
                             </div>
                             <span className="text-sm font-medium text-white">{c.full_name}</span>
                           </div>
@@ -205,7 +205,7 @@ export default function CustomersPage() {
                         <td className="px-6 py-4 text-sm text-slate-400 font-mono">{c.tc_number}</td>
                         <td className="px-6 py-4 text-sm text-slate-400 hidden md:table-cell">{c.birth_province}</td>
                         <td className="px-6 py-4 hidden lg:table-cell">
-                          <span className="text-xs px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+                          <span className="text-xs px-2.5 py-1 rounded-lg bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">
                             {maritalLabel[c.marital_status] || c.marital_status}
                           </span>
                         </td>
@@ -214,10 +214,10 @@ export default function CustomersPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-end gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => openNotes(c)} className="p-2 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="Notlar">
+                            <button onClick={() => openNotes(c)} className="p-2 rounded-lg text-slate-400 hover:text-violet-400 hover:bg-violet-500/10 transition-all" title="Notlar">
                               <ChatBubbleLeftIcon className="h-4 w-4" />
                             </button>
-                            <Link href={`/customers/${c.id}/edit`} className="p-2 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="Duzenle">
+                            <Link href={`/customers/${c.id}/edit`} className="p-2 rounded-lg text-slate-400 hover:text-violet-400 hover:bg-violet-500/10 transition-all" title="Duzenle">
                               <PencilIcon className="h-4 w-4" />
                             </Link>
                             <button onClick={() => deleteCustomer(c.id, c.full_name)} className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all" title="Sil">

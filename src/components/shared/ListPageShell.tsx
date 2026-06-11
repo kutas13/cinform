@@ -74,7 +74,7 @@ export default function ListPageShell({
       </div>
 
       {/* Search + Toggle */}
-      <div className="sticky top-0 z-10 -mx-6 lg:-mx-10 px-6 lg:px-10 py-3 bg-[#0b0f1a]/90 backdrop-blur-xl border-b border-slate-800/50 mb-6">
+      <div className="sticky top-0 z-10 -mx-6 lg:-mx-10 px-6 lg:px-10 py-3 bg-[#0f0f17]/90 backdrop-blur-xl border-b border-slate-800/50 mb-6">
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />

@@ -126,7 +126,7 @@ export default function ChineseCompaniesPage() {
           <EnvelopeOpenIcon className="h-3.5 w-3.5" />
         </button>
         <button type="button" onClick={() => downloadDoc(c.business_license_file_path, 'Faaliyet', c.business_license_file_name)} disabled={!c.business_license_file_path} title={c.business_license_file_path ? 'Faaliyet indir' : 'Faaliyet yok'}
-          className={`p-1.5 rounded-md border transition-all ${c.business_license_file_path ? 'border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20' : 'border-slate-700/40 bg-slate-800/30 text-slate-600 cursor-not-allowed'}`}>
+          className={`p-1.5 rounded-md border transition-all ${c.business_license_file_path ? 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'border-slate-700/40 bg-slate-800/30 text-slate-600 cursor-not-allowed'}`}>
           <DocumentTextIcon className="h-3.5 w-3.5" />
         </button>
         <button type="button" onClick={() => downloadDoc(c.id_card_file_path, 'ID Kart', c.id_card_file_name)} disabled={!c.id_card_file_path} title={c.id_card_file_path ? 'ID Kart indir' : 'ID kart yok'}
@@ -172,8 +172,8 @@ export default function ChineseCompaniesPage() {
             </div>
           ) : view === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map(c => (
-                <div key={c.id} className="card p-5 hover:scale-[1.02] hover:shadow-lg hover:shadow-amber-500/5 transition-all duration-200 group">
+              {filtered.map((c, idx) => (
+                <div key={c.id} className="card p-5 hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 group animate-fade-in-up" style={{ animationDelay: `${idx * 50}ms`, animationFillMode: 'both' }}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center border border-amber-500/20">
@@ -201,7 +201,7 @@ export default function ChineseCompaniesPage() {
                   <div className="flex items-center justify-between pt-3 border-t border-slate-800/50">
                     <span className="text-[10px] text-slate-600">{new Date(c.created_at).toLocaleDateString('tr-TR')}</span>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Link href={`/chinese-companies/${c.id}/edit`} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
+                      <Link href={`/chinese-companies/${c.id}/edit`} className="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 transition-all">
                         <PencilIcon className="h-3.5 w-3.5" />
                       </Link>
                       <button onClick={() => del(c.id, c.company_name)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all">
@@ -248,7 +248,7 @@ export default function ChineseCompaniesPage() {
                             <button onClick={() => openNotes(c)} className="p-2 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 transition-all" title="Notlar">
                               <ChatBubbleLeftIcon className="h-4 w-4" />
                             </button>
-                            <Link href={`/chinese-companies/${c.id}/edit`} className="p-2 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="Duzenle">
+                            <Link href={`/chinese-companies/${c.id}/edit`} className="p-2 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 transition-all" title="Duzenle">
                               <PencilIcon className="h-4 w-4" />
                             </Link>
                             <button onClick={() => del(c.id, c.company_name)} className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all" title="Sil">
