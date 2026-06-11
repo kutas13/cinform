@@ -213,6 +213,32 @@ export type Database = {
           created_at?: string
         }
       }
+      notes: {
+        Row: {
+          id: string
+          entity_type: 'customer' | 'chinese_company' | 'turkish_company'
+          entity_id: string
+          content: string
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          entity_type: 'customer' | 'chinese_company' | 'turkish_company'
+          entity_id: string
+          content: string
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          entity_type?: 'customer' | 'chinese_company' | 'turkish_company'
+          entity_id?: string
+          content?: string
+          created_by?: string
+          created_at?: string
+        }
+      }
       forms: {
         Row: {
           id: string
