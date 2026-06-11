@@ -7,7 +7,8 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useAuth } from '@/components/providers/AuthProvider'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
-import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { ExclamationTriangleIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import FormPageShell from '@/components/shared/FormPageShell'
 import {
   VISA_PDF_CUSTOMER_BACKUP_KEY,
   VISA_PDF_CUSTOMER_KEY,
@@ -253,19 +254,14 @@ export default function NewCustomerPage() {
   }
 
   return (
-    <div className="p-6 lg:p-10 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <Link href="/customers" className="inline-flex items-center text-blue-400 hover:text-blue-300 text-sm mb-4 transition-colors">
-          <ArrowLeftIcon className="h-4 w-4 mr-1.5" />
-          Musterilere Geri Don
-        </Link>
-        <h1 className="page-title">Yeni Musteri Olustur</h1>
-        <p className="text-slate-500 mt-1 text-sm">Musteri bilgilerini asagidaki formu doldurarak girin</p>
-      </div>
-
-      {/* Form */}
-      <div className="card p-6 lg:p-8">
+    <FormPageShell
+      title="Yeni Musteri Olustur"
+      subtitle="Musteri bilgilerini asagidaki formu doldurarak girin"
+      backHref="/customers"
+      backLabel="Musterilere Geri Don"
+      icon={<UserGroupIcon className="h-6 w-6 text-blue-400" />}
+      iconBgClass="bg-blue-500/10"
+    >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           {/* 1. Temel Bilgiler */}
           <div className="form-section bg-blue-500/5 border-blue-500/20">
@@ -515,7 +511,6 @@ export default function NewCustomerPage() {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </FormPageShell>
   )
 }

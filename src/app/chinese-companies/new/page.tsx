@@ -7,7 +7,8 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useAuth } from '@/components/providers/AuthProvider'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
-import { ArrowLeftIcon, ExclamationTriangleIcon, PaperClipIcon } from '@heroicons/react/24/outline'
+import { ExclamationTriangleIcon, PaperClipIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline'
+import FormPageShell from '@/components/shared/FormPageShell'
 import CompanyDocumentSlot from '@/components/forms/CompanyDocumentSlot'
 
 interface ChineseCompanyForm {
@@ -93,17 +94,14 @@ export default function NewChineseCompanyPage() {
   }
 
   return (
-    <div className="p-6 lg:p-10 max-w-4xl mx-auto">
-      <div className="mb-8">
-        <Link href="/chinese-companies" className="inline-flex items-center text-blue-400 hover:text-blue-300 text-sm mb-4 transition-colors">
-          <ArrowLeftIcon className="h-4 w-4 mr-1.5" />
-          Cinli Sirketlere Geri Don
-        </Link>
-        <h1 className="page-title">Yeni Cinli Sirket Olustur</h1>
-        <p className="text-slate-500 mt-1 text-sm">Cinli sirket ve davet bilgilerini girin</p>
-      </div>
-
-      <div className="card p-6 lg:p-8">
+    <FormPageShell
+      title="Yeni Cinli Sirket Olustur"
+      subtitle="Cinli sirket ve davet bilgilerini girin"
+      backHref="/chinese-companies"
+      backLabel="Cinli Sirketlere Geri Don"
+      icon={<BuildingOfficeIcon className="h-6 w-6 text-amber-400" />}
+      iconBgClass="bg-amber-500/10"
+    >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           {/* Sirket Bilgileri */}
           <div className="form-section bg-amber-500/5 border-amber-500/20">
@@ -245,7 +243,6 @@ export default function NewChineseCompanyPage() {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </FormPageShell>
   )
 }

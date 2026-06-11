@@ -7,7 +7,8 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useAuth } from '@/components/providers/AuthProvider'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
-import { ArrowLeftIcon, ExclamationTriangleIcon, PaperClipIcon } from '@heroicons/react/24/outline'
+import { ExclamationTriangleIcon, PaperClipIcon, BuildingLibraryIcon } from '@heroicons/react/24/outline'
+import FormPageShell from '@/components/shared/FormPageShell'
 import {
   VISA_PDF_TURKISH_COMPANY_BACKUP_KEY,
   VISA_PDF_TURKISH_COMPANY_KEY,
@@ -98,17 +99,14 @@ export default function NewTurkishCompanyPage() {
   }
 
   return (
-    <div className="p-6 lg:p-10 max-w-4xl mx-auto">
-      <div className="mb-8">
-        <Link href="/turkish-companies" className="inline-flex items-center text-blue-400 hover:text-blue-300 text-sm mb-4 transition-colors">
-          <ArrowLeftIcon className="h-4 w-4 mr-1.5" />
-          Turk Sirketlere Geri Don
-        </Link>
-        <h1 className="page-title">Yeni Turk Sirket Olustur</h1>
-        <p className="text-slate-500 mt-1 text-sm">Turk sirket ve is bilgilerini girin</p>
-      </div>
-
-      <div className="card p-6 lg:p-8">
+    <FormPageShell
+      title="Yeni Turk Sirket Olustur"
+      subtitle="Turk sirket ve is bilgilerini girin"
+      backHref="/turkish-companies"
+      backLabel="Turk Sirketlere Geri Don"
+      icon={<BuildingLibraryIcon className="h-6 w-6 text-rose-400" />}
+      iconBgClass="bg-rose-500/10"
+    >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           {/* Sirket */}
           <div className="form-section bg-rose-500/5 border-rose-500/20">
@@ -187,7 +185,6 @@ export default function NewTurkishCompanyPage() {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </FormPageShell>
   )
 }

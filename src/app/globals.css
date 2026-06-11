@@ -10,7 +10,7 @@
   }
   
   body {
-    @apply bg-[#0a0e1a] text-slate-100;
+    @apply bg-[#060912] text-slate-100;
   }
 
   ::-webkit-scrollbar {
@@ -91,7 +91,7 @@
   }
 
   .form-section {
-    @apply rounded-2xl p-6 border backdrop-blur-sm;
+    @apply rounded-2xl p-6 border backdrop-blur-sm transition-all duration-200 hover:border-opacity-60;
   }
 
   .sidebar-link {

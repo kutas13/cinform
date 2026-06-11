@@ -21,7 +21,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
+      <div className="min-h-screen bg-[#060912] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center animate-pulse">
             <span className="text-xl font-black text-white">C</span>
@@ -37,7 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a]">
+    <div className="min-h-screen bg-[#060912]">
       <Sidebar />
       <main className="lg:pl-[260px] pt-16 lg:pt-0 min-h-screen">
         <div className="bg-grid bg-glow-blue min-h-screen">

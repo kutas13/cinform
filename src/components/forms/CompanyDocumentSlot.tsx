@@ -182,7 +182,7 @@ export default function CompanyDocumentSlot({
 
       {currentPath ? (
         <div className="space-y-2">
-          <div className="rounded-lg border border-slate-700/40 bg-[#0a0e1a] px-3 py-2 text-xs text-slate-300">
+          <div className="rounded-lg border border-slate-700/40 bg-[#060912] px-3 py-2 text-xs text-slate-300">
             <span className="truncate font-mono" title={currentName || ''}>
               {currentName || 'dosya'}
             </span>

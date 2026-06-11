@@ -50,7 +50,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] flex relative overflow-hidden">
+    <div className="min-h-screen bg-[#060912] flex relative overflow-hidden">
       {/* Background effects */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-0 w-full h-full bg-grid opacity-50" />
