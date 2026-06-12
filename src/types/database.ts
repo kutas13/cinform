@@ -239,6 +239,38 @@ export type Database = {
           created_at?: string
         }
       }
+      yunan_customers: {
+        Row: {
+          id: string
+          full_name: string
+          tc_number: string
+          appointment_date: string
+          choice_index: number
+          status: 'pending' | 'done' | 'error'
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          full_name: string
+          tc_number: string
+          appointment_date: string
+          choice_index?: number
+          status?: 'pending' | 'done' | 'error'
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          tc_number?: string
+          appointment_date?: string
+          choice_index?: number
+          status?: 'pending' | 'done' | 'error'
+          created_by?: string
+          created_at?: string
+        }
+      }
       forms: {
         Row: {
           id: string

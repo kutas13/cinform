@@ -9,6 +9,7 @@ import {
   BuildingOfficeIcon,
   BuildingLibraryIcon,
   DocumentTextIcon,
+  CalendarDaysIcon,
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
@@ -21,6 +22,7 @@ const navItems = [
   { href: '/chinese-companies', label: 'Cinli Sirketler', icon: BuildingOfficeIcon },
   { href: '/turkish-companies', label: 'Turk Sirketler', icon: BuildingLibraryIcon },
   { href: '/forms', label: 'Formlar', icon: DocumentTextIcon },
+  { href: '/yunan-customers', label: 'Yunan Randevu', icon: CalendarDaysIcon },
 ]
 
 export default function Sidebar() {
