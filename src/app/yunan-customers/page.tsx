@@ -40,8 +40,8 @@ export default function YunanCustomersPage() {
   const loadCustomers = useCallback(async () => {
     if (!user) return
     setLoading(true)
-    const { data, error } = await supabase
-      .from('yunan_customers')
+    const { data, error } = await (supabase
+      .from('yunan_customers') as any)
       .select('*')
       .eq('created_by', user.id)
       .order('appointment_date', { ascending: true })
@@ -66,7 +66,7 @@ export default function YunanCustomersPage() {
     if (!form.appointment_date) { toast.error('Tarih secin'); return }
 
     setSaving(true)
-    const { error } = await supabase.from('yunan_customers').insert({
+    const { error } = await (supabase.from('yunan_customers') as any).insert({
       full_name: form.full_name.trim().toUpperCase(),
       tc_number: form.tc_number,
       appointment_date: form.appointment_date,
@@ -89,13 +89,13 @@ export default function YunanCustomersPage() {
 
   async function deleteCustomer(id: string, name: string) {
     if (!confirm(`"${name}" silinsin mi?`)) return
-    const { error } = await supabase.from('yunan_customers').delete().eq('id', id)
+    const { error } = await (supabase.from('yunan_customers') as any).delete().eq('id', id)
     if (error) toast.error('Silinemedi')
     else { toast.success('Silindi'); loadCustomers() }
   }
 
   async function updateStatus(id: string, status: string) {
-    const { error } = await supabase.from('yunan_customers').update({ status }).eq('id', id)
+    const { error } = await (supabase.from('yunan_customers') as any).update({ status }).eq('id', id)
     if (!error) loadCustomers()
   }
 
