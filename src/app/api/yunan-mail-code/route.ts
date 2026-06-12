@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ImapFlow } from 'imapflow'
 
-const IMAP_HOST = process.env.YUNAN_IMAP_HOST || 'imap.gmail.com'
+const IMAP_HOST = process.env.YUNAN_IMAP_HOST || 'imap.yandex.com'
 const IMAP_PORT = parseInt(process.env.YUNAN_IMAP_PORT || '993')
-const IMAP_USER = process.env.YUNAN_IMAP_USER || ''
+const IMAP_USER = process.env.YUNAN_IMAP_USER || 'vize@foxturizm.com'
 const IMAP_PASS = process.env.YUNAN_IMAP_PASS || ''
 
 interface MailCode {
@@ -67,7 +67,7 @@ async function fetchLatestCodes(): Promise<MailCode[]> {
 
     await client.logout()
   } catch (e: any) {
-    await client.close().catch(() => {})
+    try { await client.logout() } catch {}
     throw new Error('IMAP baglanti hatasi: ' + e.message)
   }
 
