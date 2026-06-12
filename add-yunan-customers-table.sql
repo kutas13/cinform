@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS yunan_customers (
   tc_number VARCHAR(11) NOT NULL,
   appointment_date DATE NOT NULL,
   choice_index INTEGER DEFAULT 1,
-  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'done', 'error')),
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'done', 'error')),
   created_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
