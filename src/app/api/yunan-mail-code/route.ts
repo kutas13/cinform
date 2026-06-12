@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ImapFlow } from 'imapflow'
+import { simpleParser } from 'mailparser'
 
 const IMAP_HOST = process.env.YUNAN_IMAP_HOST || 'imap.yandex.com'
 const IMAP_PORT = parseInt(process.env.YUNAN_IMAP_PORT || '993')
@@ -10,12 +11,14 @@ interface MailCode {
   code: string
   tcLast2: string
   date: string
-  subject: string
 }
 
-async function fetchLatestCodes(): Promise<MailCode[]> {
+async function fetchCodesSince(
+  sinceTime: Date,
+  tcLast2: string
+): Promise<MailCode | null> {
   if (!IMAP_USER || !IMAP_PASS) {
-    throw new Error('IMAP bilgileri ayarlanmamis (YUNAN_IMAP_USER / YUNAN_IMAP_PASS)')
+    throw new Error('IMAP bilgileri ayarlanmamis')
   }
 
   const client = new ImapFlow({
@@ -24,70 +27,113 @@ async function fetchLatestCodes(): Promise<MailCode[]> {
     secure: true,
     auth: { user: IMAP_USER, pass: IMAP_PASS },
     logger: false,
-  })
-
-  const codes: MailCode[] = []
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
+  } as any)
 
   try {
     await client.connect()
     const lock = await client.getMailboxLock('INBOX')
 
     try {
-      // Son 1 saat icindeki mailleri ara
-      const since = new Date(Date.now() - 60 * 60 * 1000)
+      const uids = await client.search({ since: sinceTime })
+      const uidList: number[] = Array.isArray(uids)
+        ? uids
+        : (uids as any)
+          ? [...(uids as any)]
+          : []
 
-      const messages = client.fetch(
-        { from: 'no-reply@kosmosvize.com', since },
-        { envelope: true, source: true }
-      )
+      if (uidList.length === 0) return null
+
+      // Son 50 mail yeterli
+      const recentUids = uidList.slice(-50)
+
+      const messages = client.fetch(recentUids, {
+        envelope: true,
+        source: true,
+      })
+
+      const codes: MailCode[] = []
 
       for await (const msg of messages) {
-        const source = msg.source?.toString('utf-8') || ''
         const subject = msg.envelope?.subject || ''
+        const msgDate = msg.envelope?.date
 
-        // "Mail doğrulama kodunuz:" veya "dogrulama kodunuz:" ara
-        const codeMatch = source.match(/do[gğ]rulama\s+kodunuz[:\s]*(\d{4,8})/i)
-          || source.match(/kodunuz[:\s]*(\d{4,8})/i)
+        // Sadece Kosmos dogrulama kodlari
+        const subjectLower = subject.toLowerCase()
+        const isVerification =
+          subjectLower.includes('do\u011Frulama') ||
+          subjectLower.includes('dogrulama') ||
+          subjectLower.includes('verification') ||
+          (subjectLower.includes('kosmos') && subjectLower.includes('kod'))
+        if (!isVerification) continue
+        if (subjectLower.includes('randevu')) continue
 
-        // "Kimlik Numarası:" veya "Kimlik Numarasi:" ara
-        const tcMatch = source.match(/Kimlik\s+Numaras[ıi][:\s]*(\d{2,11})/i)
+        // Zaman kontrolu
+        if (msgDate && msgDate.getTime() < sinceTime.getTime()) continue
+
+        // mailparser ile duzgun decode
+        if (!msg.source) continue
+        const parsed = await simpleParser(msg.source as any)
+        const text = parsed.text || ''
+
+        // "Mail doğrulama kodunuz: 972189"
+        const codeMatch =
+          text.match(/do[g\u011F]rulama\s+kodunuz[:\s]*(\d{4,8})/i) ||
+          text.match(/kodunuz[:\s]+(\d{4,8})/i)
+
+        // "Kimlik Numarası:\n00"
+        const tcMatch = text.match(
+          /Kimlik\s+Numaras[\u0131i][:\s]*(\d{2,11})/i
+        )
 
         if (codeMatch) {
           codes.push({
             code: codeMatch[1],
             tcLast2: tcMatch ? tcMatch[1] : '',
-            date: msg.envelope?.date?.toISOString() || '',
-            subject,
+            date: msgDate?.toISOString() || '',
           })
         }
       }
+
+      codes.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+
+      return (
+        codes.find(
+          (c) => c.tcLast2 === tcLast2 || c.tcLast2.endsWith(tcLast2)
+        ) || null
+      )
     } finally {
       lock.release()
     }
-
-    await client.logout()
-  } catch (e: any) {
-    try { await client.logout() } catch {}
-    throw new Error('IMAP baglanti hatasi: ' + e.message)
+  } finally {
+    try {
+      await client.logout()
+    } catch {}
   }
-
-  // En yeniden eskiye sirala
-  codes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  return codes
 }
 
 export async function GET(req: NextRequest) {
   const tcLast2 = req.nextUrl.searchParams.get('tc_last2')
+  const sinceParam = req.nextUrl.searchParams.get('since')
 
   if (!tcLast2) {
-    return NextResponse.json({ error: 'tc_last2 parametresi gerekli' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'tc_last2 parametresi gerekli' },
+      { status: 400 }
+    )
   }
 
-  try {
-    const codes = await fetchLatestCodes()
+  const sinceTime = sinceParam
+    ? new Date(
+        isNaN(Number(sinceParam)) ? sinceParam : Number(sinceParam)
+      )
+    : new Date(Date.now() - 5 * 60 * 1000)
 
-    // TC son 2 haneye gore eslesir
-    const match = codes.find(c => c.tcLast2 === tcLast2 || c.tcLast2.endsWith(tcLast2))
+  try {
+    const match = await fetchCodesSince(sinceTime, tcLast2)
 
     if (match) {
       return NextResponse.json({
@@ -101,9 +147,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: false,
       message: `TC sonu ${tcLast2} icin kod bulunamadi`,
-      totalFound: codes.length,
     })
   } catch (e: any) {
+    console.error('[yunan-mail-code]', e.message)
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }
