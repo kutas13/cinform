@@ -90,6 +90,18 @@
            focus:shadow-lg focus:shadow-violet-500/5
            py-3 px-4 text-sm transition-all duration-300;
   }
+
+  select.input-field option,
+  select option {
+    background-color: #1a1a2e;
+    color: #e2e8f0;
+    padding: 8px 12px;
+  }
+
+  select.input-field option:hover,
+  select option:hover {
+    background-color: #2d2d44;
+  }
   
   .form-label {
     @apply block text-[11px] font-bold text-slate-400 mb-2 uppercase tracking-[0.12em];
