@@ -49,7 +49,7 @@ class FoxVizePopup {
     };
 
     this.docFiles = {}; // { PASAPORT: File, KIMLIK: File, ... }
-    this.DOC_NAMES = ['PASAPORT', 'KIMLIK', 'DAVETIYE', 'LISANS', 'YETKILIKIMLIK', 'VIZE1', 'VIZE2', 'VIZE3', 'VIZE4', 'DILEKCE', 'FAALIYET1', 'FAALIYET2', 'VERGI', 'ADLISICIL', 'NUFUS1', 'NUFUS2', 'NUFUS3', 'SGK1', 'SGK2', 'SGK3', 'SGK4'];
+    this.DOC_NAMES = ['FOTO', 'PASAPORT', 'KIMLIK', 'DAVETIYE', 'LISANS', 'YETKILIKIMLIK', 'VIZE1', 'VIZE2', 'VIZE3', 'VIZE4', 'DILEKCE', 'FAALIYET1', 'FAALIYET2', 'VERGI', 'ADLISICIL', 'NUFUS1', 'NUFUS2', 'NUFUS3', 'SGK1', 'SGK2', 'SGK3', 'SGK4'];
 
     this.startTime = null;
     this.timerInterval = null;
@@ -493,6 +493,8 @@ class FoxVizePopup {
         continue;
       }
 
+      // FOTO
+      if (raw === 'FOTO' || raw.includes('FOTOGRAF') || raw.includes('PHOTO') || raw.includes('VESIKALIK')) { this.docFiles['FOTO'] = file; continue; }
       // PASAPORT
       if (raw.includes('PASAPORT') || raw.includes('PASSPORT')) { this.docFiles['PASAPORT'] = file; continue; }
       // KIMLIK
@@ -545,12 +547,15 @@ class FoxVizePopup {
 
     this.renderDocFiles();
     this.els.uploadDocsBtn.disabled = Object.keys(this.docFiles).length === 0;
+
+    // Dosyalari storage'a kaydet (arka plan auto-fill icin)
+    this.saveFilesToStorage();
   }
 
   renderDocFiles() {
     this.els.docFilesSection.style.display = 'block';
     const labels = {
-      PASAPORT: 'Pasaport', KIMLIK: 'Kimlik', DAVETIYE: 'Davetiye',
+      FOTO: 'Fotograf', PASAPORT: 'Pasaport', KIMLIK: 'Kimlik', DAVETIYE: 'Davetiye',
       LISANS: 'Isletme Lisansi', YETKILIKIMLIK: 'Yetkili Kimligi',
       VIZE1: 'Eski Vize 1', VIZE2: 'Eski Vize 2', VIZE3: 'Eski Vize 3', VIZE4: 'Eski Vize 4',
       DILEKCE: 'Dilekce (Sevk Mektubu)', FAALIYET1: 'Faaliyet Belgesi 1', FAALIYET2: 'Faaliyet Belgesi 2', VERGI: 'Vergi Levhasi',
@@ -574,6 +579,18 @@ class FoxVizePopup {
         <span class="doc-file-status ${hasFile ? 'ok' : 'no'}">${hasFile ? 'Hazir' : 'Yok'}</span>
       </div>`;
     }).join('');
+  }
+
+  async saveFilesToStorage() {
+    const fileDataArray = [];
+    for (const [name, file] of Object.entries(this.docFiles)) {
+      const buffer = await file.arrayBuffer();
+      const base64 = this.arrayBufferToBase64(buffer);
+      fileDataArray.push({ name, fileName: file.name, type: file.type, base64 });
+    }
+    await chrome.storage.local.set({ foxvize_files: fileDataArray });
+    console.log('[FoxVize] Saved', fileDataArray.length, 'files to storage');
+    return fileDataArray;
   }
 
   async uploadDocs() {

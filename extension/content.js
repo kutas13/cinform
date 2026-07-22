@@ -80,7 +80,7 @@ class CinPanelFormFiller {
         }
     }
 
-    // Tum sayfalari otomatik doldur (1-9) + belge yukleme sayfasina gec
+    // Tum sayfalari otomatik doldur: FOTO + PASAPORT -> 9 sayfa -> belge yukleme
     async autoFillAll(token, apiUrl) {
         if (this.isProcessing) throw new Error('Zaten isleniyor');
         this.isProcessing = true;
@@ -88,6 +88,7 @@ class CinPanelFormFiller {
         this.notify('Veriler aliniyor...', 'info');
 
         try {
+            // API'den form verisini al
             const url = apiUrl.endsWith('/') ? apiUrl + token : apiUrl + '/' + token;
             const r = await fetch(url);
             if (!r.ok) throw new Error('Form bulunamadi: ' + token);
@@ -95,7 +96,46 @@ class CinPanelFormFiller {
             if (d.error) throw new Error(d.error);
             this.formData = d;
 
-            // Sayfa 1'den 9'a kadar doldur
+            // Storage'dan dosyalari al
+            const stored = await chrome.storage.local.get('foxvize_files');
+            const files = stored.foxvize_files || [];
+            const fotoFile = files.find(f => f.name === 'FOTO');
+            const pasaportFile = files.find(f => f.name === 'PASAPORT');
+
+            // --- ADIM 1: FOTO YUKLEME ---
+            if (fotoFile) {
+                this.notify('Fotograf yukleniyor...', 'info');
+                await this.s(1500);
+                await this.uploadPreFillFile(fotoFile, '.portrait-cutting-operation input[type="file"], .el-upload--picture-card input[type="file"]');
+                await this.s(1500);
+
+                // "Select photo" butonuna tikla
+                const selectPhotoBtn = this.findButton('Select photo');
+                if (selectPhotoBtn) { selectPhotoBtn.click(); await this.s(1500); }
+
+                // "Finished" butonuna tikla
+                const finishedBtn = this.findButton('Finished');
+                if (finishedBtn) { finishedBtn.click(); await this.s(1500); }
+
+                this.notify('Fotograf yuklendi!', 'success');
+            }
+
+            // --- ADIM 2: PASAPORT YUKLEME ---
+            if (pasaportFile) {
+                this.notify('Pasaport yukleniyor...', 'info');
+                await this.s(1000);
+                await this.uploadPreFillFile(pasaportFile, '.passport-ocr-body input[type="file"]');
+                await this.s(2000);
+
+                // "Confirm the auto-filled passport details" butonuna tikla
+                const confirmBtn = this.findButton('Confirm');
+                if (confirmBtn) { confirmBtn.click(); await this.s(2000); }
+
+                this.notify('Pasaport yuklendi ve onaylandi!', 'success');
+            }
+
+            // --- ADIM 3: 9 SAYFAYI DOLDUR ---
+            await this.s(1000);
             for (let p = 1; p <= 9; p++) {
                 if (this.shouldStop) { this.notify('Durduruldu!', 'error'); return; }
                 this.notify(`Sayfa ${p}/9 dolduruluyor...`, 'info');
@@ -106,11 +146,19 @@ class CinPanelFormFiller {
 
             this.notify('9 sayfa tamamlandi! Belge sayfasina geciliyor...', 'success');
 
-            // Belge yukleme sayfasina gec
+            // --- ADIM 4: BELGE YUKLEME SAYFASINA GEC ---
             await this.s(1000);
             await this.goToUploadPage();
 
-            this.notify('Belge yukleme sayfasina gecildi!', 'success');
+            // --- ADIM 5: BELGELERI YUKLE ---
+            await this.s(2000);
+            const docFiles = files.filter(f => f.name !== 'FOTO' && f.name !== 'PASAPORT');
+            if (docFiles.length > 0) {
+                this.notify('Belgeler yukleniyor...', 'info');
+                await this.uploadDocuments(docFiles);
+            }
+
+            this.notify('Tum islem tamamlandi!', 'success');
 
             // Background'a tamamlandi bildirimi gonder
             try {
@@ -125,6 +173,40 @@ class CinPanelFormFiller {
         } finally {
             this.isProcessing = false;
         }
+    }
+
+    // Pre-fill asamasinda tek dosya yukleme (FOTO veya PASAPORT)
+    async uploadPreFillFile(fileData, inputSelector) {
+        const input = document.querySelector(inputSelector);
+        if (!input) {
+            console.log('[FoxVize] Pre-fill input not found:', inputSelector);
+            return;
+        }
+
+        const binary = atob(fileData.base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: fileData.type || 'image/jpeg' });
+        const file = new File([blob], fileData.fileName, { type: fileData.type || 'image/jpeg' });
+
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+
+        console.log('[FoxVize] Pre-fill uploaded:', fileData.name);
+    }
+
+    // Buton bul (text icerigi ile)
+    findButton(text) {
+        const buttons = document.querySelectorAll('button');
+        for (const btn of buttons) {
+            if (btn.textContent.trim().toLowerCase().includes(text.toLowerCase())) {
+                return btn;
+            }
+        }
+        return null;
     }
     async run(token, apiUrl, startPage, mode) {
         if (this.isProcessing) throw new Error('Zaten isleniyor');
