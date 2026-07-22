@@ -3,6 +3,19 @@
  * Panel sayfasindaki butondan mesaj alir, background.js'e iletir
  */
 
+// Dosyalari chrome.storage'a kaydet
+window.addEventListener('foxvize-save-files', (event) => {
+  const { files } = event.detail;
+  if (!files || files.length === 0) return;
+
+  console.log('[FoxVize Bridge] Saving', files.length, 'files to storage');
+  chrome.storage.local.set({ foxvize_files: files }, () => {
+    console.log('[FoxVize Bridge] Files saved to storage');
+    window.dispatchEvent(new CustomEvent('foxvize-files-saved', { detail: { count: files.length } }));
+  });
+});
+
+// Otomatik doldurma baslat
 window.addEventListener('foxvize-auto-fill', (event) => {
   const { token } = event.detail;
   if (!token) return;

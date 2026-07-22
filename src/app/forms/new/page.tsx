@@ -55,6 +55,9 @@ export default function NewFormPage() {
   const [customerQuery, setCustomerQuery] = useState('')
   const [chineseCompanyQuery, setChineseCompanyQuery] = useState('')
   const [turkishCompanyQuery, setTurkishCompanyQuery] = useState('')
+  const [selectedFolder, setSelectedFolder] = useState<string>('')
+  const [detectedFiles, setDetectedFiles] = useState<{name: string, fileName: string}[]>([])
+  const [folderFiles, setFolderFiles] = useState<File[]>([])
   
   const { user } = useAuth()
   const router = useRouter()
@@ -162,6 +165,102 @@ export default function NewFormPage() {
     if (success) { toast.success('Token kopyalandi!'); setCopied(true); setTimeout(() => setCopied(false), 3000) }
   }
 
+  const normalizeTR = (str: string) => {
+    return str.normalize('NFC')
+      .replace(/[üÜ\u00fc\u00dc]/g, 'U')
+      .replace(/[şŞ\u015f\u015e]/g, 'S')
+      .replace(/[çÇ\u00e7\u00c7]/g, 'C')
+      .replace(/[öÖ\u00f6\u00d6]/g, 'O')
+      .replace(/[ıİ\u0131\u0130]/g, 'I')
+      .replace(/[ğĞ\u011f\u011e]/g, 'G')
+  }
+
+  const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    const folderName = files[0].webkitRelativePath.split('/')[0]
+    setSelectedFolder(folderName)
+    setFolderFiles(files)
+
+    const DOC_NAMES = ['FOTO', 'PASAPORT', 'KIMLIK', 'DAVETIYE', 'LISANS', 'YETKILIKIMLIK', 'VIZE1', 'VIZE2', 'VIZE3', 'VIZE4', 'DILEKCE', 'FAALIYET1', 'FAALIYET2', 'VERGI', 'ADLISICIL', 'NUFUS1', 'NUFUS2', 'NUFUS3', 'SGK1', 'SGK2', 'SGK3', 'SGK4']
+    const detected: {name: string, fileName: string}[] = []
+
+    for (const file of files) {
+      let raw = file.name.normalize('NFC').toUpperCase().replace(/\.[^.]+$/, '').replace(/[\s_-]+/g, '')
+      raw = normalizeTR(raw)
+
+      let docName = ''
+      if (DOC_NAMES.includes(raw)) { docName = raw }
+      else if (raw === 'FOTO' || raw.includes('FOTOGRAF') || raw.includes('PHOTO') || raw.includes('VESIKALIK')) { docName = 'FOTO' }
+      else if (raw.includes('PASAPORT') || raw.includes('PASSPORT')) { docName = 'PASAPORT' }
+      else if (raw === 'KIMLIK' || raw.includes('NUFUSCUZDANI')) { docName = 'KIMLIK' }
+      else if (raw.includes('DAVET') || raw.includes('INVITATION')) { docName = 'DAVETIYE' }
+      else if (raw.includes('DILEKCE')) { docName = 'DILEKCE' }
+      else if (raw.includes('VERGI')) { docName = 'VERGI' }
+      else if (raw.includes('ADLISICIL') || raw.includes('ADLI') || raw.includes('SABIKA')) { docName = 'ADLISICIL' }
+      else {
+        const faalMatch = raw.match(/FAALIYET(\d*)/)
+        if (faalMatch) { docName = 'FAALIYET' + (faalMatch[1] || '1') }
+        const sgkMatch = raw.match(/SGK(\d*)/)
+        if (sgkMatch) { docName = 'SGK' + (sgkMatch[1] || '1') }
+        const nufusMatch = raw.match(/NUFUS(\d*)/)
+        if (nufusMatch) { docName = 'NUFUS' + (nufusMatch[1] || '1') }
+        const vizeMatch = raw.match(/VIZE(\d*)/)
+        if (vizeMatch && !raw.includes('VERGI')) { docName = 'VIZE' + (vizeMatch[1] || '1') }
+      }
+
+      if (docName) {
+        detected.push({ name: docName, fileName: file.name })
+      }
+    }
+
+    setDetectedFiles(detected)
+    if (detected.length > 0) toast.success(`${detected.length} belge bulundu!`)
+  }
+
+  const saveFilesToExtension = async () => {
+    if (folderFiles.length === 0) return
+
+    const DOC_NAMES = ['FOTO', 'PASAPORT', 'KIMLIK', 'DAVETIYE', 'LISANS', 'YETKILIKIMLIK', 'VIZE1', 'VIZE2', 'VIZE3', 'VIZE4', 'DILEKCE', 'FAALIYET1', 'FAALIYET2', 'VERGI', 'ADLISICIL', 'NUFUS1', 'NUFUS2', 'NUFUS3', 'SGK1', 'SGK2', 'SGK3', 'SGK4']
+    const fileDataArray: any[] = []
+
+    for (const file of folderFiles) {
+      let raw = file.name.normalize('NFC').toUpperCase().replace(/\.[^.]+$/, '').replace(/[\s_-]+/g, '')
+      raw = normalizeTR(raw)
+
+      let docName = ''
+      if (DOC_NAMES.includes(raw)) { docName = raw }
+      else if (raw === 'FOTO' || raw.includes('FOTOGRAF') || raw.includes('PHOTO') || raw.includes('VESIKALIK')) { docName = 'FOTO' }
+      else if (raw.includes('PASAPORT') || raw.includes('PASSPORT')) { docName = 'PASAPORT' }
+      else if (raw === 'KIMLIK' || raw.includes('NUFUSCUZDANI')) { docName = 'KIMLIK' }
+      else if (raw.includes('DAVET') || raw.includes('INVITATION')) { docName = 'DAVETIYE' }
+      else if (raw.includes('DILEKCE')) { docName = 'DILEKCE' }
+      else if (raw.includes('VERGI')) { docName = 'VERGI' }
+      else if (raw.includes('ADLISICIL') || raw.includes('ADLI') || raw.includes('SABIKA')) { docName = 'ADLISICIL' }
+      else {
+        const faalMatch = raw.match(/FAALIYET(\d*)/)
+        if (faalMatch) { docName = 'FAALIYET' + (faalMatch[1] || '1') }
+        const sgkMatch = raw.match(/SGK(\d*)/)
+        if (sgkMatch) { docName = 'SGK' + (sgkMatch[1] || '1') }
+        const nufusMatch = raw.match(/NUFUS(\d*)/)
+        if (nufusMatch) { docName = 'NUFUS' + (nufusMatch[1] || '1') }
+        const vizeMatch = raw.match(/VIZE(\d*)/)
+        if (vizeMatch && !raw.includes('VERGI')) { docName = 'VIZE' + (vizeMatch[1] || '1') }
+      }
+
+      if (docName) {
+        const buffer = await file.arrayBuffer()
+        const base64 = btoa(new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ''))
+        fileDataArray.push({ name: docName, fileName: file.name, type: file.type, base64 })
+      }
+    }
+
+    // Dispatch event to extension bridge
+    window.dispatchEvent(new CustomEvent('foxvize-save-files', { detail: { files: fileDataArray } }))
+    return fileDataArray
+  }
+
   if (loadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -181,7 +280,7 @@ export default function NewFormPage() {
             <CheckIcon className="h-10 w-10 text-emerald-400" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">Form Olusturuldu!</h1>
-          <p className="text-slate-400">Asagidaki token'i Chrome extension'da kullanabilirsiniz.</p>
+          <p className="text-slate-400">Asagidaki token ile basvuru yapabilirsiniz.</p>
         </div>
 
         <div className="card p-6 mb-8">
@@ -189,11 +288,32 @@ export default function NewFormPage() {
           <div className="bg-[#0f0f17] rounded-xl p-5 mb-4 border border-slate-700/50">
             <code className="text-emerald-400 break-all font-mono text-sm block mb-4">{createdToken}</code>
             <button onClick={handleCopyToken} className="w-full btn-primary py-3.5 text-base flex items-center justify-center gap-2">
-              {copied ? <><CheckIcon className="h-5 w-5" /> Kopyalandi!</> : <><ClipboardDocumentIcon className="h-5 w-5" /> Token'i Kopyala</>}
+              {copied ? <><CheckIcon className="h-5 w-5" /> Kopyalandi!</> : <><ClipboardDocumentIcon className="h-5 w-5" /> Token&apos;i Kopyala</>}
             </button>
           </div>
-          <p className="text-xs text-slate-600 text-center">Chrome extension'da "Form ID" alanina yapistirin.</p>
         </div>
+
+        {/* Otomatik Basvuru Butonu */}
+        {detectedFiles.length > 0 && (
+          <div className="card p-6 mb-8 border-l-4 border-violet-500/50">
+            <h2 className="text-lg font-bold text-violet-400 mb-2">🚀 Otomatik Basvuru</h2>
+            <p className="text-slate-400 text-sm mb-4">Klasordeki {detectedFiles.length} belge hazir. Tek tikla basvuruyu baslat.</p>
+            <button
+              onClick={async () => {
+                toast.loading('Dosyalar hazirlaniyor...')
+                await saveFilesToExtension()
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('foxvize-auto-fill', { detail: { token: createdToken } }))
+                  toast.dismiss()
+                  toast.success('Basvuru baslatildi! Chrome arka planda doldurulacak.')
+                }, 500)
+              }}
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-base shadow-lg shadow-violet-500/25 transition-all hover:scale-[1.02] flex items-center justify-center gap-3"
+            >
+              🚀 Basvuruyu Baslat ({detectedFiles.length} belge ile)
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link href="/forms/new" className="btn-success text-center py-3">Yeni Form</Link>
@@ -413,6 +533,42 @@ export default function NewFormPage() {
                 </>
               )}
             </div>
+          </div>
+
+          {/* Belge Klasoru */}
+          <div className="form-section bg-violet-500/5 border-violet-500/20">
+            <h3 className="text-base font-bold text-violet-400 mb-4">📁 Belge Klasoru (Opsiyonel)</h3>
+            <p className="text-slate-400 text-xs mb-4">Musteri belgelerinin oldugu klasoru secin. Otomatik basvuruda kullanilacak.</p>
+            
+            <div className="flex items-center gap-3 mb-4">
+              <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600/20 text-violet-300 hover:bg-violet-600/30 border border-violet-500/30 font-medium text-sm transition-all">
+                📂 Klasor Sec
+                <input
+                  type="file"
+                  className="hidden"
+                  {...({ webkitdirectory: 'true', directory: 'true' } as any)}
+                  onChange={handleFolderSelect}
+                />
+              </label>
+              {selectedFolder && (
+                <span className="text-sm text-slate-300 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700/50">
+                  📁 {selectedFolder}
+                </span>
+              )}
+            </div>
+
+            {detectedFiles.length > 0 && (
+              <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30">
+                <p className="text-xs font-medium text-emerald-400 mb-2">✅ {detectedFiles.length} belge bulundu:</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+                  {detectedFiles.map((f, i) => (
+                    <div key={i} className="text-[10px] px-2 py-1 rounded bg-slate-700/30 text-slate-300 flex items-center gap-1">
+                      <span className="text-emerald-400">✓</span> {f.name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Submit */}
