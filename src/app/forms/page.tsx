@@ -222,9 +222,14 @@ export default function FormsPage() {
 
                 <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-800/50">
                   <span className="text-[10px] text-slate-600">{new Date(f.created_at).toLocaleDateString('tr-TR')}</span>
-                  <button onClick={() => deleteForm(f.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-all">
-                    <TrashIcon className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/forms/${f.id}`} className="text-[10px] px-2.5 py-1 rounded-md bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 font-medium transition-all">
+                      Detay
+                    </Link>
+                    <button onClick={() => deleteForm(f.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-all">
+                      <TrashIcon className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
