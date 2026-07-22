@@ -223,7 +223,16 @@ export default function FormsPage() {
                 <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-800/50">
                   <span className="text-[10px] text-slate-600">{new Date(f.created_at).toLocaleDateString('tr-TR')}</span>
                   <div className="flex items-center gap-2">
-                    <Link href={`/forms/${f.id}`} className="text-[10px] px-2.5 py-1 rounded-md bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 font-medium transition-all">
+                    <button
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('foxvize-auto-fill', { detail: { token: f.access_token } }));
+                        toast.success('Basvuru baslatiliyor... Chrome arka planda acilacak');
+                      }}
+                      className="text-[10px] px-2.5 py-1 rounded-md bg-gradient-to-r from-violet-600/30 to-indigo-600/30 text-violet-300 hover:from-violet-600/50 hover:to-indigo-600/50 font-medium transition-all border border-violet-500/20"
+                    >
+                      🚀 Basvuru
+                    </button>
+                    <Link href={`/forms/${f.id}`} className="text-[10px] px-2.5 py-1 rounded-md bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 font-medium transition-all">
                       Detay
                     </Link>
                     <button onClick={() => deleteForm(f.id)} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-all">
