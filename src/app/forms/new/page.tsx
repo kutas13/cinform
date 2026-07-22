@@ -40,7 +40,7 @@ interface SavedTravel {
   entries_type: string
 }
 
-interface Customer { id: string; full_name: string; tc_number: string; passport_number?: string }
+interface Customer { id: string; full_name: string; tc_number: string }
 interface ChineseCompany { id: string; company_name: string; city: string }
 interface TurkishCompany { id: string; company_name: string; address: string }
 
@@ -75,13 +75,6 @@ export default function NewFormPage() {
   const fingerprintGiven = watch('fingerprint_given')
   const selectedCustomerId = watch('customer_id')
 
-  useEffect(() => {
-    if (selectedCustomerId) {
-      const cust = customers.find(c => c.id === selectedCustomerId)
-      if (cust?.passport_number) setValue('passport_number', cust.passport_number)
-    }
-  }, [selectedCustomerId, customers, setValue])
-
   const filteredCustomers = customers.filter((c) =>
     `${c.full_name} ${c.tc_number}`.toLowerCase().includes(customerQuery.toLowerCase())
   )
@@ -111,7 +104,7 @@ export default function NewFormPage() {
       if (!user) return
       try {
         const [customersRes, chineseRes, turkishRes, travelsRes] = await Promise.all([
-          supabase.from('customers').select('id, full_name, tc_number, passport_number').eq('created_by', user.id).order('created_at', { ascending: false }),
+          supabase.from('customers').select('id, full_name, tc_number').eq('created_by', user.id).order('created_at', { ascending: false }),
           supabase.from('chinese_companies').select('id, company_name, city').eq('created_by', user.id).order('created_at', { ascending: false }),
           supabase.from('turkish_companies').select('id, company_name, address').eq('created_by', user.id).order('created_at', { ascending: false }),
           supabase.from('forms').select('travel_name, travel_start_date, travel_end_date, visa_type, visa_validity_months, max_duration_days, entries_type').eq('created_by', user.id).not('travel_name', 'is', null).order('created_at', { ascending: false }),
@@ -158,9 +151,6 @@ export default function NewFormPage() {
 
       const { error } = await supabase.from('forms').insert(insertData).select().single()
       if (error) throw error
-      if (data.passport_number) {
-        await supabase.from('customers').update({ passport_number: data.passport_number }).eq('id', data.customer_id)
-      }
       toast.success('Form basariyla olusturuldu!')
       setCreatedToken(accessToken)
     } catch (error: any) {
