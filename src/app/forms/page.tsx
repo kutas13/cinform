@@ -226,11 +226,33 @@ export default function FormsPage() {
                     <button
                       onClick={() => {
                         window.dispatchEvent(new CustomEvent('foxvize-auto-fill', { detail: { token: f.access_token } }));
-                        toast.success('Basvuru baslatiliyor... Chrome arka planda acilacak');
+                        toast.success('Basvuru baslatiliyor...');
                       }}
                       className="text-[10px] px-2.5 py-1 rounded-md bg-gradient-to-r from-violet-600/30 to-indigo-600/30 text-violet-300 hover:from-violet-600/50 hover:to-indigo-600/50 font-medium transition-all border border-violet-500/20"
                     >
                       🚀 Basvuru
+                    </button>
+                    <button
+                      onClick={async () => {
+                        toast.loading('Dilekce hazirlaniyor...', { id: 'dilekce-' + f.id })
+                        try {
+                          const res = await fetch(`/api/dilekce/${f.access_token}`)
+                          if (!res.ok) throw new Error('Dilekce olusturulamadi')
+                          const blob = await res.blob()
+                          const url = URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = `Dilekce_${f.customer?.full_name || f.access_token}.docx`
+                          a.click()
+                          URL.revokeObjectURL(url)
+                          toast.success('Dilekce indirildi!', { id: 'dilekce-' + f.id })
+                        } catch (e: any) {
+                          toast.error(e.message, { id: 'dilekce-' + f.id })
+                        }
+                      }}
+                      className="text-[10px] px-2.5 py-1 rounded-md bg-gradient-to-r from-amber-600/30 to-orange-600/30 text-amber-300 hover:from-amber-600/50 hover:to-orange-600/50 font-medium transition-all border border-amber-500/20"
+                    >
+                      📄 Dilekce
                     </button>
                     <Link href={`/forms/${f.id}`} className="text-[10px] px-2.5 py-1 rounded-md bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 font-medium transition-all">
                       Detay

@@ -27,6 +27,7 @@ interface FormData {
   china_visa_month?: number
   fingerprint_given?: string
   fingerprint_date?: string
+  passport_number?: string
 }
 
 interface SavedTravel {
@@ -39,7 +40,7 @@ interface SavedTravel {
   entries_type: string
 }
 
-interface Customer { id: string; full_name: string; tc_number: string }
+interface Customer { id: string; full_name: string; tc_number: string; passport_number?: string }
 interface ChineseCompany { id: string; company_name: string; city: string }
 interface TurkishCompany { id: string; company_name: string; address: string }
 
@@ -72,6 +73,14 @@ export default function NewFormPage() {
 
   const beenToChina = watch('been_to_china')
   const fingerprintGiven = watch('fingerprint_given')
+  const selectedCustomerId = watch('customer_id')
+
+  useEffect(() => {
+    if (selectedCustomerId) {
+      const cust = customers.find(c => c.id === selectedCustomerId)
+      if (cust?.passport_number) setValue('passport_number', cust.passport_number)
+    }
+  }, [selectedCustomerId, customers, setValue])
 
   const filteredCustomers = customers.filter((c) =>
     `${c.full_name} ${c.tc_number}`.toLowerCase().includes(customerQuery.toLowerCase())
@@ -102,7 +111,7 @@ export default function NewFormPage() {
       if (!user) return
       try {
         const [customersRes, chineseRes, turkishRes, travelsRes] = await Promise.all([
-          supabase.from('customers').select('id, full_name, tc_number').eq('created_by', user.id).order('created_at', { ascending: false }),
+          supabase.from('customers').select('id, full_name, tc_number, passport_number').eq('created_by', user.id).order('created_at', { ascending: false }),
           supabase.from('chinese_companies').select('id, company_name, city').eq('created_by', user.id).order('created_at', { ascending: false }),
           supabase.from('turkish_companies').select('id, company_name, address').eq('created_by', user.id).order('created_at', { ascending: false }),
           supabase.from('forms').select('travel_name, travel_start_date, travel_end_date, visa_type, visa_validity_months, max_duration_days, entries_type').eq('created_by', user.id).not('travel_name', 'is', null).order('created_at', { ascending: false }),
@@ -149,6 +158,9 @@ export default function NewFormPage() {
 
       const { error } = await supabase.from('forms').insert(insertData).select().single()
       if (error) throw error
+      if (data.passport_number) {
+        await supabase.from('customers').update({ passport_number: data.passport_number }).eq('id', data.customer_id)
+      }
       toast.success('Form basariyla olusturuldu!')
       setCreatedToken(accessToken)
     } catch (error: any) {
@@ -300,12 +312,12 @@ export default function NewFormPage() {
             <p className="text-slate-400 text-sm mb-4">Klasordeki {detectedFiles.length} belge hazir. Tek tikla basvuruyu baslat.</p>
             <button
               onClick={async () => {
-                toast.loading('Dosyalar hazirlaniyor...')
+                toast.loading('Dosyalar hazirlaniyor...', { id: 'new-apply' })
                 await saveFilesToExtension()
                 setTimeout(() => {
                   window.dispatchEvent(new CustomEvent('foxvize-auto-fill', { detail: { token: createdToken } }))
-                  toast.dismiss()
-                  toast.success('Basvuru baslatildi! Chrome arka planda doldurulacak.')
+                  toast.dismiss('new-apply')
+                  toast.success('Basvuru baslatildi!')
                 }, 500)
               }}
               className="w-full py-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-base shadow-lg shadow-violet-500/25 transition-all hover:scale-[1.02] flex items-center justify-center gap-3"
@@ -408,6 +420,11 @@ export default function NewFormPage() {
                   <p className="text-xs text-slate-500 mt-1">Aramaya uygun Turk sirket bulunamadi.</p>
                 )}
                 {errors.turkish_company_id && <p className="text-rose-400 text-xs mt-1.5">{errors.turkish_company_id.message}</p>}
+              </div>
+              <div className="md:col-span-3">
+                <label className="form-label">Pasaport No</label>
+                <input {...register('passport_number')} type="text" className="input-field" placeholder="U12345678" />
+                <p className="text-xs text-slate-600 mt-1">Dilekce belgesi icin gerekli (musteri secilince otomatik dolar)</p>
               </div>
             </div>
           </div>

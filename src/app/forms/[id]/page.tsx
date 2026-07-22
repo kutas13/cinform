@@ -170,11 +170,9 @@ export default function FormDetailPage() {
               <RocketLaunchIcon className="h-5 w-5" /> Otomatik Basvuru
             </h2>
             <p className="text-slate-400 text-sm">
-              {autoFillStatus === 'idle' && 'Cin vize formunu arka planda otomatik doldurur. Extension yuklu olmali.'}
+              {autoFillStatus === 'idle' && 'Cin vize formunu otomatik doldurur. Extension yuklu olmali.'}
               {autoFillStatus === 'starting' && 'Extension\'a baglaniliyor...'}
-              {autoFillStatus === 'running' && 'Form arka planda dolduruluyor... Tamamlaninca bildirim alacaksiniz.'}
-              {autoFillStatus === 'done' && 'Form basariyla dolduruldu! Belge yukleme sayfasi hazir.'}
-              {autoFillStatus === 'error' && 'Extension bulunamadi. Extension yuklu ve aktif mi?'}
+              {autoFillStatus === 'running' && 'Form dolduruluyor...'}
             </p>
           </div>
           <button
@@ -182,41 +180,48 @@ export default function FormDetailPage() {
               setAutoFillStatus('starting')
               const event = new CustomEvent('foxvize-auto-fill', { detail: { token: formData.access_token } })
               window.dispatchEvent(event)
-              
-              const handleResponse = (e: Event) => {
-                const detail = (e as CustomEvent).detail
-                if (detail?.success) {
-                  setAutoFillStatus('running')
-                  toast.success('Form arka planda dolduruluyor!')
-                } else {
-                  setAutoFillStatus('error')
-                  toast.error('Extension baglantisi basarisiz')
-                }
-                window.removeEventListener('foxvize-auto-fill-started', handleResponse)
-              }
-              window.addEventListener('foxvize-auto-fill-started', handleResponse)
-              
-              setTimeout(() => {
-                if (autoFillStatus === 'starting') {
-                  setAutoFillStatus('error')
-                  toast.error('Extension yanit vermedi. Yuklu ve aktif mi?')
-                }
-              }, 3000)
+              setTimeout(() => setAutoFillStatus('idle'), 3000)
             }}
             disabled={autoFillStatus === 'running' || autoFillStatus === 'starting'}
             className={`shrink-0 inline-flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm shadow-lg transition-all hover:scale-105 ${
               autoFillStatus === 'running' 
                 ? 'bg-emerald-600 text-white shadow-emerald-500/25 cursor-not-allowed' 
-                : autoFillStatus === 'error'
-                ? 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-rose-500/25'
                 : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-violet-500/25'
             }`}
           >
-            {autoFillStatus === 'running' && <><div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> Calisiyor...</>}
-            {autoFillStatus === 'starting' && <><div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> Baglaniyor...</>}
-            {autoFillStatus === 'idle' && <><RocketLaunchIcon className="h-5 w-5" /> Basvuruyu Baslat</>}
-            {autoFillStatus === 'done' && <><CheckIcon className="h-5 w-5" /> Tamamlandi</>}
-            {autoFillStatus === 'error' && <><RocketLaunchIcon className="h-5 w-5" /> Tekrar Dene</>}
+            <RocketLaunchIcon className="h-5 w-5" /> Basvuruyu Baslat
+          </button>
+        </div>
+      </div>
+
+      {/* Dilekce */}
+      <div className="card p-6 mb-6 border-l-4 border-amber-500/50">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-amber-400 mb-1">📄 Dilekce</h2>
+            <p className="text-slate-400 text-sm">Konsolosluga sunulacak dilekce belgesini Word olarak indir.</p>
+          </div>
+          <button
+            onClick={async () => {
+              toast.loading('Dilekce hazirlaniyor...', { id: 'dilekce' })
+              try {
+                const res = await fetch(`/api/dilekce/${formData.access_token}`)
+                if (!res.ok) throw new Error('Dilekce olusturulamadi')
+                const blob = await res.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `Dilekce_${formData.customer.full_name}.docx`
+                a.click()
+                URL.revokeObjectURL(url)
+                toast.success('Dilekce indirildi!', { id: 'dilekce' })
+              } catch (e: any) {
+                toast.error(e.message, { id: 'dilekce' })
+              }
+            }}
+            className="shrink-0 inline-flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25 transition-all hover:scale-105"
+          >
+            📄 Dilekce Indir
           </button>
         </div>
       </div>
