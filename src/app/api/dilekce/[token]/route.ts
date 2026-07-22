@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import {
   Document, Packer, Paragraph, TextRun, AlignmentType,
-  TabStopType, TabStopPosition, BorderStyle,
+  TabStopType, convertMillimetersToTwip,
 } from 'docx'
 
 export const dynamic = 'force-dynamic'
@@ -23,6 +23,39 @@ function todayTR(): string {
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const year = d.getFullYear()
   return `${day}.${month}.${year}`
+}
+
+const FONT = 'Times New Roman'
+const SZ = 22
+
+function txt(text: string, bold = false): TextRun {
+  return new TextRun({ text, font: FONT, size: SZ, bold })
+}
+
+function infoLine(label: string, value: string): Paragraph {
+  const padded = label.padEnd(30, ' ')
+  return new Paragraph({
+    spacing: { after: 40 },
+    indent: { left: convertMillimetersToTwip(5) },
+    tabStops: [{ type: TabStopType.LEFT, position: convertMillimetersToTwip(70) }],
+    children: [
+      new TextRun({ text: padded, font: FONT, size: SZ }),
+      new TextRun({ text: `:${value}`, font: FONT, size: SZ }),
+    ],
+  })
+}
+
+function sectionHeader(text: string): Paragraph {
+  return new Paragraph({
+    spacing: { before: 160, after: 80 },
+    children: [
+      new TextRun({ text, font: FONT, size: SZ, bold: true, underline: {} }),
+    ],
+  })
+}
+
+function emptyLine(): Paragraph {
+  return new Paragraph({ spacing: { after: 40 }, children: [] })
 }
 
 export async function GET(
@@ -72,174 +105,102 @@ export async function GET(
     const chinDistrict = (chinese.district || '').toUpperCase()
     const visitCity = chinDistrict ? `${chinCity} (${chinDistrict})` : chinCity
 
-    const FONT = 'Times New Roman'
-    const SIZE = 24
-
     const doc = new Document({
       sections: [{
         properties: {
           page: {
-            margin: { top: 1000, bottom: 1000, left: 1200, right: 1200 },
+            margin: { top: 800, bottom: 800, left: 1200, right: 1000 },
           },
         },
         children: [
           // Tarih (sag hizali)
           new Paragraph({
             alignment: AlignmentType.RIGHT,
-            spacing: { after: 400 },
-            children: [
-              new TextRun({ text: todayTR(), font: FONT, size: SIZE }),
-            ],
+            spacing: { after: 300 },
+            children: [txt(todayTR())],
           }),
 
-          // Baslık
+          emptyLine(),
+
+          // Baslik
           new Paragraph({
-            spacing: { after: 100 },
-            children: [
-              new TextRun({ text: 'Çin Halk Cumhuriyeti İstanbul Başkonsolosluğu', font: FONT, size: SIZE, bold: true }),
-            ],
+            spacing: { after: 20 },
+            children: [txt('Çin Halk Cumhuriyeti İstanbul Başkonsolosluğu', true)],
           }),
           new Paragraph({
-            spacing: { after: 300 },
-            children: [
-              new TextRun({ text: "Vize Bölümü'ne,", font: FONT, size: SIZE, bold: true }),
-            ],
+            spacing: { after: 120 },
+            children: [txt("Vize Bölümü`ne,", true)],
           }),
 
           // Ana metin
           new Paragraph({
-            spacing: { after: 100 },
-            indent: { firstLine: 720 },
+            spacing: { after: 60 },
+            indent: { firstLine: convertMillimetersToTwip(12) },
             children: [
-              new TextRun({
-                text: 'Aşağıda bilgileri verilen kadrolu şirket personelimize, ülkenize yapacağı seyahat için gerekli olan vizenin verilmesini rica ederiz.',
-                font: FONT, size: SIZE,
-              }),
+              txt('Aşağıda bilgileri verilen kadrolu şirket personelimize, ülkenize yapacağı seyahat için gerekli olan vizenin verilmesini rica ederiz.'),
             ],
           }),
 
-          // Yetkili bilgileri (sag tarafa yaslı)
+          // Yetkili bilgileri (sag tarafa)
           new Paragraph({
             alignment: AlignmentType.RIGHT,
-            spacing: { before: 200 },
+            spacing: { before: 120, after: 20 },
             children: [
-              new TextRun({ text: 'Yetkili Adı Soyadı: ', font: FONT, size: SIZE }),
-              new TextRun({ text: fullName, font: FONT, size: SIZE, bold: true }),
+              txt('Yetkili Adı Soyadı: '),
+              txt(fullName, true),
             ],
           }),
           new Paragraph({
             alignment: AlignmentType.RIGHT,
+            spacing: { after: 20 },
             children: [
-              new TextRun({ text: 'Görevi: ', font: FONT, size: SIZE }),
-              new TextRun({ text: 'GENEL MÜDÜR', font: FONT, size: SIZE, bold: true }),
+              txt('Görevi: '),
+              txt('GENEL MÜDÜR', true),
             ],
           }),
           new Paragraph({
             alignment: AlignmentType.RIGHT,
-            children: [
-              new TextRun({ text: 'İmza:', font: FONT, size: SIZE }),
-            ],
+            spacing: { after: 20 },
+            children: [txt('İmza:')],
           }),
           new Paragraph({
             alignment: AlignmentType.RIGHT,
-            spacing: { after: 300 },
-            children: [
-              new TextRun({ text: 'Kaşe:', font: FONT, size: SIZE }),
-            ],
-          }),
-
-          // Separator
-          new Paragraph({
-            border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: '000000' } },
             spacing: { after: 200 },
-            children: [],
-          }),
-
-          // Kisi bilgileri baslik
-          new Paragraph({
-            spacing: { before: 200, after: 200 },
-            children: [
-              new TextRun({ text: "Çin'e Gidecek Kişi ile İlgili Bilgiler:", font: FONT, size: SIZE, bold: true, underline: {} }),
-            ],
+            children: [txt('Kaşe:')],
           }),
 
           // Kisi bilgileri
-          ...createInfoLine('Adı Soyadı', fullName, FONT, SIZE),
-          ...createInfoLine('Pasaport No', passportNo, FONT, SIZE),
-          ...createInfoLine('Görevi / Mesleği', 'GENEL MÜDÜR', FONT, SIZE),
-          ...createInfoLine('Ulaşılabilir Cep No', phone, FONT, SIZE),
+          sectionHeader("Çin`e Gidecek Kişi ile İlgili Bilgiler:"),
+          infoLine('Adı Soyadı', fullName),
+          infoLine('Pasaport No', passportNo),
+          infoLine('Görevi / Mesleği', 'GENEL MÜDÜR'),
+          infoLine('Ulaşılabilir Cep No', phone),
 
-          // Separator
+          // Seyahat bilgileri
           new Paragraph({
-            border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: '000000' } },
-            spacing: { before: 100, after: 200 },
-            children: [],
+            spacing: { before: 160, after: 80 },
+            children: [txt('Seyahat Bilgileri:', true)],
           }),
+          infoLine('Gidiş – Dönüş Tarihleri', `${startDate} –${endDate}`),
+          infoLine('Ziyaret Amacı', 'TİCARİ'),
+          infoLine('Ziyaret Edilecek Şehirler', visitCity),
 
-          // Seyahat bilgileri baslik
-          new Paragraph({
-            spacing: { after: 200 },
-            children: [
-              new TextRun({ text: 'Seyahat Bilgileri:', font: FONT, size: SIZE, bold: true, underline: {} }),
-            ],
-          }),
+          // Gonderici firma
+          sectionHeader('Gönderici Firma ile İlgili Bilgiler:'),
+          infoLine('Firma Adı', turkCompany),
+          infoLine('Ulaşılabilir Tel No', phone),
 
-          ...createInfoLine('Gidiş – Dönüş Tarihleri', `${startDate} – ${endDate}`, FONT, SIZE),
-          ...createInfoLine('Ziyaret Amacı', 'TİCARİ', FONT, SIZE),
-          ...createInfoLine('Ziyaret Edilecek Şehirler', visitCity, FONT, SIZE),
-
-          // Separator
-          new Paragraph({
-            border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: '000000' } },
-            spacing: { before: 100, after: 200 },
-            children: [],
-          }),
-
-          // Gonderici firma baslik
-          new Paragraph({
-            spacing: { after: 200 },
-            children: [
-              new TextRun({ text: 'Gönderici Firma ile İlgili Bilgiler:', font: FONT, size: SIZE, bold: true, underline: {} }),
-            ],
-          }),
-
-          ...createInfoLine('Firma Adı', turkCompany, FONT, SIZE),
-          ...createInfoLine('Ulaşılabilir Tel No', phone, FONT, SIZE),
-
-          // Separator
-          new Paragraph({
-            border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: '000000' } },
-            spacing: { before: 100, after: 200 },
-            children: [],
-          }),
-
-          // Cinli firma baslik
-          new Paragraph({
-            spacing: { after: 200 },
-            children: [
-              new TextRun({ text: "Çin'de Ziyaret Edilecek Firma ile İlgili Bilgiler:", font: FONT, size: SIZE, bold: true, underline: {} }),
-            ],
-          }),
-
-          ...createInfoLine('Firma / Fuar Adı', chinCompany, FONT, SIZE),
-          ...createInfoLine('Ulaşılabilir Tel No', chinPhone, FONT, SIZE),
-
-          // Separator
-          new Paragraph({
-            border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: '000000' } },
-            spacing: { before: 100, after: 200 },
-            children: [],
-          }),
+          // Cinli firma
+          sectionHeader("Çin`de Ziyaret Edilecek Firma ile İlgili Bilgiler:"),
+          infoLine('Firma / Fuar Adı', chinCompany),
+          infoLine('Ulaşılabilir Tel No', chinPhone),
 
           // NOT
           new Paragraph({
             spacing: { before: 200 },
             children: [
-              new TextRun({ text: 'NOT: ', font: FONT, size: SIZE, bold: true }),
-              new TextRun({
-                text: 'Seyahat sebebiyle oluşabilecek masraflar, şirketimiz tarafından karşılanacak olup; söz konusu kişinin vize süresi bitiminden önce geri döneceğini taahhüt ederiz.',
-                font: FONT, size: SIZE,
-              }),
+              txt('NOT: ', true),
+              txt('Seyahat sebebiyle oluşabilecek  masraflar, şirketimiz tarafından karşılanacak olup; söz konusu kişinin vize süresi bitiminden önce geri döneceğini taahhüt ederiz.'),
             ],
           }),
         ],
@@ -265,21 +226,4 @@ export async function GET(
       { status: 500 }
     )
   }
-}
-
-function createInfoLine(label: string, value: string, font: string, size: number): Paragraph[] {
-  return [
-    new Paragraph({
-      spacing: { after: 80 },
-      indent: { left: 360 },
-      children: [
-        new TextRun({ text: `${label}`, font, size, bold: true }),
-        new TextRun({ text: `\t: `, font, size }),
-        new TextRun({ text: value, font, size }),
-      ],
-      tabStops: [
-        { type: TabStopType.LEFT, position: TabStopPosition.MAX * 0.35 },
-      ],
-    }),
-  ]
 }
