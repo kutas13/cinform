@@ -7,55 +7,46 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-function formatDateTR(dateStr: string): string {
+function fmtDate(dateStr: string): string {
   if (!dateStr) return '../../....'
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return dateStr
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const year = d.getFullYear()
-  return `${day}/${month}/${year}`
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
 }
 
-function todayTR(): string {
+function today(): string {
   const d = new Date()
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const year = d.getFullYear()
-  return `${day}.${month}.${year}`
+  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`
 }
 
-const FONT = 'Times New Roman'
-const SZ = 22
+const F = 'Times New Roman'
+const S = 22
+const TAB_POS = convertMillimetersToTwip(65)
 
-function txt(text: string, bold = false): TextRun {
-  return new TextRun({ text, font: FONT, size: SZ, bold })
+function r(text: string, bold = false): TextRun {
+  return new TextRun({ text, font: F, size: S, bold })
 }
 
-function infoLine(label: string, value: string): Paragraph {
-  const padded = label.padEnd(30, ' ')
+function line(label: string, value: string): Paragraph {
   return new Paragraph({
-    spacing: { after: 40 },
+    spacing: { after: 30 },
     indent: { left: convertMillimetersToTwip(5) },
-    tabStops: [{ type: TabStopType.LEFT, position: convertMillimetersToTwip(70) }],
+    tabStops: [{ type: TabStopType.LEFT, position: TAB_POS }],
     children: [
-      new TextRun({ text: padded, font: FONT, size: SZ }),
-      new TextRun({ text: `:${value}`, font: FONT, size: SZ }),
+      r(label),
+      new TextRun({ text: '\t', font: F, size: S }),
+      r(':' + value),
     ],
   })
 }
 
-function sectionHeader(text: string): Paragraph {
+function header(text: string, underline = true): Paragraph {
   return new Paragraph({
-    spacing: { before: 160, after: 80 },
+    spacing: { before: 140, after: 60 },
     children: [
-      new TextRun({ text, font: FONT, size: SZ, bold: true, underline: {} }),
+      new TextRun({ text, font: F, size: S, bold: true, underline: underline ? {} : undefined }),
     ],
   })
-}
-
-function emptyLine(): Paragraph {
-  return new Paragraph({ spacing: { after: 40 }, children: [] })
 }
 
 export async function GET(
@@ -64,166 +55,117 @@ export async function GET(
 ) {
   try {
     const { token } = params
-    if (!token) {
-      return NextResponse.json({ error: 'Token gerekli' }, { status: 400 })
-    }
+    if (!token) return NextResponse.json({ error: 'Token gerekli' }, { status: 400 })
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
-    const { data: form, error: formError } = await supabase
+    const { data: form, error: fe } = await supabase
       .from('forms').select('*').eq('access_token', token).single()
-    if (formError || !form) {
-      return NextResponse.json({ error: 'Form bulunamadi' }, { status: 404 })
-    }
+    if (fe || !form) return NextResponse.json({ error: 'Form bulunamadi' }, { status: 404 })
 
-    const [custRes, chinRes, turkRes] = await Promise.all([
+    const [cu, ch, tu] = await Promise.all([
       supabase.from('customers').select('*').eq('id', form.customer_id).single(),
       supabase.from('chinese_companies').select('*').eq('id', form.chinese_company_id).single(),
       supabase.from('turkish_companies').select('*').eq('id', form.turkish_company_id).single(),
     ])
+    const c = cu.data as any, cn = ch.data as any, tr = tu.data as any
+    if (!c || !cn || !tr) return NextResponse.json({ error: 'Veriler bulunamadi' }, { status: 404 })
 
-    const customer = custRes.data as any
-    const chinese = chinRes.data as any
-    const turkish = turkRes.data as any
-
-    if (!customer || !chinese || !turkish) {
-      return NextResponse.json({ error: 'Ilgili veriler bulunamadi' }, { status: 404 })
-    }
-
-    const fullName = (customer.full_name || '').toUpperCase()
-    const passportNo = customer.passport_number || '...............'
-    const phone = customer.phone_number || '...............'
-    const startDate = formatDateTR(form.travel_start_date)
-    const endDate = formatDateTR(form.travel_end_date)
-    const turkCompany = (turkish.company_name || '').toUpperCase()
-    const chinCompany = (chinese.company_name || '').toUpperCase()
-    const chinPhone = chinese.phone || '...............'
-    const chinCity = (chinese.city || '').toUpperCase()
-    const chinDistrict = (chinese.district || '').toUpperCase()
-    const visitCity = chinDistrict ? `${chinCity} (${chinDistrict})` : chinCity
+    const name = (c.full_name || '').toUpperCase()
+    const pp = c.passport_number || '...............'
+    const tel = c.phone_number || '...............'
+    const d1 = fmtDate(form.travel_start_date)
+    const d2 = fmtDate(form.travel_end_date)
+    const trk = (tr.company_name || '').toUpperCase()
+    const chn = (cn.company_name || '').toUpperCase()
+    const ctel = cn.phone || '...............'
+    const city = (cn.city || '').toUpperCase()
+    const dist = (cn.district || '').toUpperCase()
+    const visit = dist ? `${city} (${dist})` : city
 
     const doc = new Document({
       sections: [{
         properties: {
-          page: {
-            margin: { top: 800, bottom: 800, left: 1200, right: 1000 },
-          },
+          page: { margin: { top: 800, bottom: 800, left: 1200, right: 1000 } },
         },
         children: [
-          // Tarih (sag hizali)
+          // Tarih
           new Paragraph({
             alignment: AlignmentType.RIGHT,
-            spacing: { after: 300 },
-            children: [txt(todayTR())],
+            spacing: { after: 400 },
+            children: [r(today())],
           }),
-
-          emptyLine(),
 
           // Baslik
+          new Paragraph({ children: [r('Çin Halk Cumhuriyeti İstanbul Başkonsolosluğu', true)] }),
           new Paragraph({
-            spacing: { after: 20 },
-            children: [txt('Çin Halk Cumhuriyeti İstanbul Başkonsolosluğu', true)],
-          }),
-          new Paragraph({
-            spacing: { after: 120 },
-            children: [txt("Vize Bölümü`ne,", true)],
+            spacing: { after: 100 },
+            children: [r("Vize Bölümü`ne,", true)],
           }),
 
-          // Ana metin
+          // Metin
           new Paragraph({
-            spacing: { after: 60 },
-            indent: { firstLine: convertMillimetersToTwip(12) },
-            children: [
-              txt('Aşağıda bilgileri verilen kadrolu şirket personelimize, ülkenize yapacağı seyahat için gerekli olan vizenin verilmesini rica ederiz.'),
-            ],
+            spacing: { after: 40 },
+            indent: { firstLine: convertMillimetersToTwip(13) },
+            children: [r('Aşağıda bilgileri verilen kadrolu şirket personelimize, ülkenize yapacağı seyahat için gerekli olan vizenin verilmesini rica ederiz.')],
           }),
 
-          // Yetkili bilgileri (sag tarafa)
-          new Paragraph({
-            alignment: AlignmentType.RIGHT,
-            spacing: { before: 120, after: 20 },
-            children: [
-              txt('Yetkili Adı Soyadı: '),
-              txt(fullName, true),
-            ],
-          }),
-          new Paragraph({
-            alignment: AlignmentType.RIGHT,
-            spacing: { after: 20 },
-            children: [
-              txt('Görevi: '),
-              txt('GENEL MÜDÜR', true),
-            ],
-          }),
-          new Paragraph({
-            alignment: AlignmentType.RIGHT,
-            spacing: { after: 20 },
-            children: [txt('İmza:')],
-          }),
-          new Paragraph({
-            alignment: AlignmentType.RIGHT,
-            spacing: { after: 200 },
-            children: [txt('Kaşe:')],
-          }),
+          // Yetkili (sag)
+          new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { before: 100 }, children: [r('Yetkili Adı Soyadı: ' + name)] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [r('Görevi: GENEL MÜDÜR')] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, children: [r('İmza:')] }),
+          new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { after: 160 }, children: [r('Kaşe:')] }),
 
-          // Kisi bilgileri
-          sectionHeader("Çin`e Gidecek Kişi ile İlgili Bilgiler:"),
-          infoLine('Adı Soyadı', fullName),
-          infoLine('Pasaport No', passportNo),
-          infoLine('Görevi / Mesleği', 'GENEL MÜDÜR'),
-          infoLine('Ulaşılabilir Cep No', phone),
+          // Kisi
+          header("Çin`e Gidecek Kişi ile İlgili Bilgiler:"),
+          line('Adı Soyadı', name),
+          line('Pasaport No', pp),
+          line('Görevi / Mesleği', ' GENEL MÜDÜR'),
+          line('Ulaşılabilir Cep No', ' ' + tel),
 
-          // Seyahat bilgileri
-          new Paragraph({
-            spacing: { before: 160, after: 80 },
-            children: [txt('Seyahat Bilgileri:', true)],
-          }),
-          infoLine('Gidiş – Dönüş Tarihleri', `${startDate} –${endDate}`),
-          infoLine('Ziyaret Amacı', 'TİCARİ'),
-          infoLine('Ziyaret Edilecek Şehirler', visitCity),
+          // Seyahat
+          header('Seyahat Bilgileri:', false),
+          line('Gidiş – Dönüş Tarihleri', ' ' + d1 + ' –' + d2),
+          line('Ziyaret Amacı', 'TİCARİ'),
+          line('Ziyaret Edilecek Şehirler', visit),
 
-          // Gonderici firma
-          sectionHeader('Gönderici Firma ile İlgili Bilgiler:'),
-          infoLine('Firma Adı', turkCompany),
-          infoLine('Ulaşılabilir Tel No', phone),
+          // Gonderici
+          header('Gönderici Firma ile İlgili Bilgiler:'),
+          line('Firma Adı', ' ' + trk),
+          line('Ulaşılabilir Tel No', ' ' + tel),
 
-          // Cinli firma
-          sectionHeader("Çin`de Ziyaret Edilecek Firma ile İlgili Bilgiler:"),
-          infoLine('Firma / Fuar Adı', chinCompany),
-          infoLine('Ulaşılabilir Tel No', chinPhone),
+          // Cinli
+          header("Çin`de Ziyaret Edilecek Firma ile İlgili Bilgiler:"),
+          line('Firma / Fuar Adı', ' ' + chn),
+          line('Ulaşılabilir Tel No', ' ' + ctel),
 
           // NOT
           new Paragraph({
-            spacing: { before: 200 },
+            spacing: { before: 180 },
             children: [
-              txt('NOT: ', true),
-              txt('Seyahat sebebiyle oluşabilecek  masraflar, şirketimiz tarafından karşılanacak olup; söz konusu kişinin vize süresi bitiminden önce geri döneceğini taahhüt ederiz.'),
+              r('NOT: ', true),
+              r('Seyahat sebebiyle oluşabilecek  masraflar, şirketimiz tarafından karşılanacak olup; söz konusu kişinin vize süresi bitiminden önce geri döneceğini taahhüt ederiz.'),
             ],
           }),
         ],
       }],
     })
 
-    const buffer = await Packer.toBuffer(doc)
-    const uint8 = new Uint8Array(buffer)
+    const buf = await Packer.toBuffer(doc)
 
-    return new NextResponse(uint8, {
+    return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Disposition': `attachment; filename="Dilekce_${fullName.replace(/\s+/g, '_')}.docx"`,
+        'Content-Disposition': `attachment; filename="Dilekce_${name.replace(/\s+/g,'_')}.docx"`,
         'Cache-Control': 'no-cache',
       },
     })
-
-  } catch (error: any) {
-    console.error('Dilekce API Error:', error)
-    return NextResponse.json(
-      { error: 'Dilekce olusturulamadi: ' + (error.message || '') },
-      { status: 500 }
-    )
+  } catch (e: any) {
+    console.error('Dilekce Error:', e)
+    return NextResponse.json({ error: e.message || 'Hata' }, { status: 500 })
   }
 }
