@@ -43,8 +43,88 @@ class CinPanelFormFiller {
                     .catch(e => sendResponse({ success: false, error: e.message }));
                 return true;
             }
+            if (msg.action === 'autoFillFromPanel') {
+                this.shouldStop = false;
+                this.SCALE = msg.speed || 1.5;
+                this.autoFillAll(msg.token, msg.apiUrl)
+                    .then(() => sendResponse({ success: true }))
+                    .catch(e => sendResponse({ success: false, error: e.message }));
+                return true;
+            }
         });
         this.addIndicator();
+        this.checkAutoFillHash();
+    }
+
+    // URL hash'te foxvize token varsa otomatik baslat
+    async checkAutoFillHash() {
+        const hash = window.location.hash;
+        if (!hash.includes('foxvize=')) return;
+
+        const token = hash.split('foxvize=')[1]?.split('&')[0];
+        if (!token) return;
+
+        // Hash'i temizle (URL'de gorunmesin)
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+
+        // Sayfa tam yuklenene kadar bekle
+        await this.s(2000);
+
+        this.notify('Otomatik doldurma basliyor: ' + token, 'info');
+        console.log('[FoxVize] Auto-fill triggered for token:', token);
+
+        try {
+            await this.autoFillAll(token, 'https://foxvize.online/api/forms/');
+        } catch (e) {
+            this.notify('Otomatik doldurma hatasi: ' + e.message, 'error');
+        }
+    }
+
+    // Tum sayfalari otomatik doldur (1-9) + belge yukleme sayfasina gec
+    async autoFillAll(token, apiUrl) {
+        if (this.isProcessing) throw new Error('Zaten isleniyor');
+        this.isProcessing = true;
+        this.shouldStop = false;
+        this.notify('Veriler aliniyor...', 'info');
+
+        try {
+            const url = apiUrl.endsWith('/') ? apiUrl + token : apiUrl + '/' + token;
+            const r = await fetch(url);
+            if (!r.ok) throw new Error('Form bulunamadi: ' + token);
+            const d = await r.json();
+            if (d.error) throw new Error(d.error);
+            this.formData = d;
+
+            // Sayfa 1'den 9'a kadar doldur
+            for (let p = 1; p <= 9; p++) {
+                if (this.shouldStop) { this.notify('Durduruldu!', 'error'); return; }
+                this.notify(`Sayfa ${p}/9 dolduruluyor...`, 'info');
+                await this.s(300);
+                await this.fillPage(p);
+                if (p < 9) await this.s(500);
+            }
+
+            this.notify('9 sayfa tamamlandi! Belge sayfasina geciliyor...', 'success');
+
+            // Belge yukleme sayfasina gec
+            await this.s(1000);
+            await this.goToUploadPage();
+
+            this.notify('Belge yukleme sayfasina gecildi!', 'success');
+
+            // Background'a tamamlandi bildirimi gonder
+            try {
+                chrome.runtime.sendMessage({ action: 'autoFillComplete', token: token, success: true });
+            } catch (e) {}
+        } catch (e) {
+            this.notify('Hata: ' + e.message, 'error');
+            try {
+                chrome.runtime.sendMessage({ action: 'autoFillComplete', token: token, success: false });
+            } catch (ex) {}
+            throw e;
+        } finally {
+            this.isProcessing = false;
+        }
     }
     async run(token, apiUrl, startPage, mode) {
         if (this.isProcessing) throw new Error('Zaten isleniyor');

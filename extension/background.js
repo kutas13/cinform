@@ -64,8 +64,71 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'logError':
             console.error('Extension Error:', message.error);
             break;
+
+        case 'openAndFill':
+            handleOpenAndFill(message.token, message.apiUrl)
+                .then(() => sendResponse({ success: true }))
+                .catch(e => sendResponse({ success: false, error: e.message }));
+            return true;
+
+        case 'autoFillComplete':
+            handleAutoFillComplete(message.token, message.success, sender.tab?.windowId);
+            break;
     }
 });
+
+/**
+ * Minimized pencerede vize sitesini ac ve otomatik doldur
+ */
+async function handleOpenAndFill(token, apiUrl) {
+    console.log('[FoxVize BG] Opening minimized window for token:', token);
+
+    const url = `https://consular.mfa.gov.cn/VISA/visa/visaform#foxvize=${token}`;
+
+    // Minimized pencere ac
+    const win = await chrome.windows.create({
+        url: url,
+        state: 'minimized',
+        type: 'normal'
+    });
+
+    console.log('[FoxVize BG] Minimized window created:', win.id);
+
+    // Token ve window ID'yi kaydet (tamamlaninca kapatmak icin)
+    await chrome.storage.local.set({
+        'autoFill_active': {
+            token: token,
+            windowId: win.id,
+            startedAt: Date.now()
+        }
+    });
+}
+
+/**
+ * Otomatik doldurma tamamlaninca bildirim gonder
+ */
+async function handleAutoFillComplete(token, success, windowId) {
+    console.log('[FoxVize BG] Auto-fill complete:', token, success);
+
+    if (success) {
+        chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'icons/icon48.png',
+            title: 'Basvuru Tamamlandi!',
+            message: `${token} formu basariyla dolduruldu. Belge yukleme sayfasina gecildi.`
+        });
+    } else {
+        chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'icons/icon48.png',
+            title: 'Basvuru Hatasi',
+            message: `${token} formu doldurulurken hata olustu.`
+        });
+    }
+
+    // Active state'i temizle
+    await chrome.storage.local.remove('autoFill_active');
+}
 
 /**
  * Kullanım istatistiklerini güncelle

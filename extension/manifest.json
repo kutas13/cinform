@@ -7,7 +7,8 @@
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "notifications"
   ],
   
   "host_permissions": [
@@ -22,6 +23,11 @@
     {
       "matches": ["https://consular.mfa.gov.cn/*"],
       "js": ["content.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["https://foxvize.online/*", "http://localhost:3000/*"],
+      "js": ["panel-bridge.js"],
       "run_at": "document_end"
     }
   ],
